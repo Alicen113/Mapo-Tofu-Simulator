@@ -94,13 +94,65 @@ html:fullscreen{width:100%;height:100%;background:#171210}
  #info h2{font-size:13px}
  #helpToggle{min-height:36px;font-size:12px}
 }
+/* スマホ：ページは固定し、説明・選択欄だけを必要に応じて内部スクロール。 */
+@media(max-width:700px){
+ html{height:100%;overflow:hidden;overscroll-behavior:none}
+ body,body[data-stage="6"]{height:100dvh;min-height:0;overflow:hidden;grid-template-rows:auto auto auto minmax(0,1fr) auto;gap:4px;padding-top:calc(44px + env(safe-area-inset-top));padding-bottom:max(4px,env(safe-area-inset-bottom));overscroll-behavior:none}
+ #mobileScore{min-height:40px;padding-top:calc(6px + env(safe-area-inset-top));padding-bottom:6px}
+ #mobileScoreValue{font-size:14px}#mobileScore span{font-size:11px}
+ header.panel{padding:4px 6px;gap:4px}header h1{font-size:12px;width:auto;flex:1 1 140px}header #step{display:none}
+ header #reset,header #sound,header #fullscreen,header #bgmSelect{min-height:30px;font-size:10px!important;padding:4px 6px!important}
+ header #bgmSelect{max-width:115px!important}header #sound{margin-left:0}
+ #info{padding:5px 8px;min-height:0;max-height:23dvh;overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
+ #info h2{font-size:11px;margin:0 0 3px}#helpToggle{min-height:28px;font-size:10px;padding:3px 7px;margin:0}
+ #help{font-size:10px;line-height:1.4}#stats{display:none}#progress{margin-top:3px;height:3px}
+ #meters{font-size:10px;margin-top:3px;display:grid;grid-template-columns:1fr 1fr;gap:2px 5px}.meter{margin:0;gap:3px}.meter span{width:65px}.meter i{max-width:45px}
+ #buttons,#buttons:has(.stir-group){padding:4px;gap:4px;max-height:21dvh;overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
+ #buttons button{min-height:30px;font-size:10px;padding:5px 7px}.stir-group{gap:4px}.stir-group strong{font-size:10px;min-width:50px}.stir-group select{padding:4px;font-size:10px}
+ #buttons span{font-size:9px!important;padding:2px!important}
+ #view{min-height:0;height:100%;width:100%;grid-row:4}
+ #bottom{gap:4px;margin:0;padding:0;min-height:36px}
+ #next{min-height:36px;padding:8px 12px;font-size:11px}
+ #bottom #controls{position:fixed!important;z-index:12;width:100px;max-width:100px;padding:5px;background:#201714f5;flex:none;border-radius:14px;touch-action:none}
+ #heatrow{display:flex;flex-direction:column;flex-wrap:nowrap;gap:2px}
+ #heatlabel{font-size:10px}#heatdial{width:76px;height:76px;border-width:3px}
+ #dialneedle{top:7px;height:22px;transform-origin:2px 28px}
+ #heattext{font-size:11px}#heatrow #off{min-height:28px;padding:3px 12px;font-size:10px}
+ #result{max-height:25dvh;overflow:auto;overscroll-behavior:contain;padding:7px}
+ #result h2{font-size:12px}#score{font-size:23px}#result p,#detail{font-size:10px;line-height:1.4}
+}
+/* 項目のラベルは折り返さず、各項目ごとに文字を縮小する。 */
+button,.stir-group strong,.stir-group select,#bgmSelect,#heattext{white-space:nowrap}
+#buttons button{max-width:100%;min-width:0}
+#buttons .stir-group{min-width:0}
+#mobileHeatButtons{display:none}
+@media(max-width:700px){
+ #bottom #controls{width:116px;max-width:116px;padding:6px}
+ #heatdial,#diallabels,#heatrow #off{display:none!important}
+ #mobileHeatButtons{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;width:100%}
+ #mobileHeatButtons button{font-size:12px;min-height:42px;padding:7px 2px;touch-action:manipulation}
+ #mobileHeatButtons button.active{background:#a04a23;border-color:#ffc878}
+ #heattext{font-size:10px}
+ .stir-group select{min-width:0}
+}
+/* 調理キャンバスと火力操作を別領域に分離し、鍋との重なりを防ぐ。 */
+body[data-stage="2"],body[data-stage="3"],body[data-stage="4"]{--heat-rail:148px}
+body[data-stage="2"] #view,body[data-stage="3"] #view,body[data-stage="4"] #view{width:calc(100vw - var(--heat-rail))}
+#bottom #controls{position:fixed!important;left:auto!important;right:10px!important;top:50%!important;bottom:auto!important;transform:translateY(-50%);width:128px;max-width:128px}
+@media(max-width:700px){
+ body[data-stage="2"],body[data-stage="3"],body[data-stage="4"]{--heat-rail:82px}
+ body[data-stage="2"] #view,body[data-stage="3"] #view,body[data-stage="4"] #view{width:calc(100% - var(--heat-rail));justify-self:start}
+ #bottom #controls{right:max(6px,env(safe-area-inset-right))!important;width:76px;max-width:76px;padding:5px;transform:none}
+ #mobileHeatButtons{grid-template-columns:1fr;gap:5px}
+ #mobileHeatButtons button{min-height:40px;font-size:12px}
+}
 </style></head><body>
 <canvas id="view" aria-label="麻婆豆腐の調理場"></canvas>
-<header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
+<header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="fullscreen" type="button" title="対応ブラウザで全画面表示">⛶ 全画面</button><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
 <section id="mobileScore" class="panel" aria-label="現在の採点"><span>採点</span><strong id="mobileScoreValue">—</strong></section>
 <section id="info" class="panel"><h2 id="title"></h2><button id="helpToggle" type="button" aria-controls="help" aria-expanded="false">説明を表示</button><p id="help" hidden></p><div id="stats"></div><div id="meters"></div><div id="progress"><div id="bar"></div></div></section>
 <div id="buttons" aria-label="具材と調理道具の選択"></div>
-<div id="bottom"><div id="controls" class="panel"><div id="heatrow"><label id="heatlabel" for="heat">火加減</label><input id="heat" type="range" min="0" max="100" value="0" tabindex="-1" aria-hidden="true"><button id="heatdial" type="button" role="slider" aria-labelledby="heatlabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="ダイヤルを回す／上下にドラッグ。矢印キーでも調整できます"><span id="dialneedle"></span></button><div id="diallabels">消火 · 弱 · 中 · 強</div><span id="heattext"></span><button id="off">消火</button></div></div><button id="next">仕込み開始 →</button></div>
+<div id="bottom"><div id="controls" class="panel"><div id="heatrow"><label id="heatlabel" for="heat">火加減</label><input id="heat" type="range" min="0" max="100" value="0" tabindex="-1" aria-hidden="true"><button id="heatdial" type="button" role="slider" aria-labelledby="heatlabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="ダイヤルを回す／上下にドラッグ。矢印キーでも調整できます"><span id="dialneedle"></span></button><div id="diallabels">消火 · 弱 · 中 · 強</div><span id="heattext"></span><div id="mobileHeatButtons" role="group" aria-label="火加減"><button type="button" data-heat="0">消火</button><button type="button" data-heat="20">弱火</button><button type="button" data-heat="50">中火</button><button type="button" data-heat="90">強火</button></div><button id="off">消火</button></div></div><button id="next">仕込み開始 →</button></div>
 <div id="toast" role="status"></div>
 <section id="result" class="panel"><h2 id="dishname"></h2><div id="score"></div><p id="review"></p><div id="detail"></div><button id="restart">もう一度つくる</button></section>
 
@@ -138,7 +190,7 @@ const portions=Object.fromEntries(ingredients.map(d=>[d[0],0]));
 const recipeSpec={tofu:230,beef:50,broth:160,douban:1};
 let aromaProgress=0,seasoningProgress=0,aromaStarted=false,sauceStarted=false,brothAdded=false;
 let doubanAmount=0;
-selected.add('negi');portions.negi=1;
+// 開始時は香味野菜を未選択（豆腐は基本食材）。
 let saladOilAdded=false,cutIngredientsAdded=false,seasoningsAdded=false,beefAdded=false;
 const seasoningDefs=[
  ['touchi','豆豉醤','大さじ1強'],['douban','豆板醤','小さじ1'],
@@ -229,8 +281,7 @@ function plateButtons(){plateThemes.forEach((theme,i)=>addButton('皿：'+theme.
 function addTofuHeightControl(){
  const text=document.createElement('span');
  text.style.cssText='padding:8px;font-size:12px;color:#ffe3ad';
- text.textContent='絹ごし豆腐230g・厚み1cm／牛ひき肉50g・長ネギは太め8cmを基準';
- $('buttons').append(text);
+ // 基準量の案内文は選択UIには表示しない。
 }
 function changePortion(id,delta=1){portions[id]=Math.max(0,portions[id]+delta);if(portions[id])selected.add(id);else selected.delete(id);ui();}
 function ellipsePoly(x,z,rx,rz,n=28){return Array.from({length:n},(_,i)=>({x:x+Math.cos(i/n*TAU)*rx,z:z+Math.sin(i/n*TAU)*rz}));}
@@ -240,7 +291,7 @@ let meatLoosen=0;
 let cook=0,burn=0,flips=0,mixed=0,lost=0,agitation=0,simmer=0,soup=1,damage=0,gentle=0,starch=0,mix=0,glaze=0,lowFirst=false,starchStep=0,pourCircle=0,pourBad=0,lastMix=0,lastFlip=-1,emulsify=0;
 let topAmounts=Object.fromEntries(topDefs.map(x=>[x[0],0])),chosenTops=new Set(),topCircle=0,orbit=0,lastSfx=0,emitClock=0;
 const titles=['0 / 自由な具材セレクト','1 / 直感！包丁さばき','2 / 醤とひき肉のリアル炒め','3 / スープと豆腐のリアル煮込み','4 / 究極のとろみ付け','5 / 魂の仕上げ','完成 / あなたの一皿'];
-const helps=['1〜2人分：絹ごし豆腐230g、牛ひき肉50g。長ネギは太め8cmを初期選択。ニラは追加アレンジです。しょうが薄切り2枚・にんにく4〜5枚分も選択して、長ネギと同じ自由切りで刻めます。','豆腐は厚み1cmの直線切り。長ネギ・ニラ・しょうが・にんにくは自由にみじん切り。微細な破片は軽量な専用描画で表現し、刻みの細かさも評価します。','サラダ油大さじ1〜2で香味野菜を弱火で炒め、牛ひき肉50gをほぐします。上の「サラダ油」→「香味野菜」→「ひき肉」で手動投入。肉に火が通ったら調味料の選択欄から豆豉醤・しょうゆ・紹興酒などを選んで個別に投入。スープ・砂糖を入れ忘れた場合は煮込み開始時に補います。豆板醤は手動で基準小さじ1を目安に。','鶏ガラスープ160mlと砂糖ひとつまみを加え、絹ごし豆腐と仕込んだ具材を煮ます。中弱火で5〜7秒、優しく混ぜてください。実際の調理時間を短縮したゲーム表現です。','片栗粉小さじ1を倍量の水で溶いたものを基準量として投入。①弱火・消火 ②回し入れて混ぜる ③強火で鍋振りしてツヤを出す。','ごま油・ラー油は各大さじ1弱を目安に。万能ねぎ・花椒はお好みで。追加の香草も自由、仕上げは採点しません。','作った具材を中華皿に盛り付け。360度ゆっくり鑑賞できます。'];
+const helps=['1〜2人分：絹ごし豆腐230g、牛ひき肉50g。香味野菜は未選択から開始します。長ネギは太め8cmが基準です。ニラは追加アレンジです。しょうが薄切り2枚・にんにく4〜5枚分も選択して、長ネギと同じ自由切りで刻めます。','豆腐は厚み1cmの直線切り。長ネギ・ニラ・しょうが・にんにくは自由にみじん切り。微細な破片は軽量な専用描画で表現し、刻みの細かさも評価します。','サラダ油大さじ1〜2で香味野菜を弱火で炒め、牛ひき肉50gをほぐします。上の「サラダ油」→「香味野菜」→「ひき肉」で手動投入。肉に火が通ったら調味料の選択欄から豆豉醤・しょうゆ・紹興酒などを選んで個別に投入。スープ・砂糖を入れ忘れた場合は煮込み開始時に補います。豆板醤は手動で基準小さじ1を目安に。','鶏ガラスープ160mlと砂糖ひとつまみを加え、絹ごし豆腐と仕込んだ具材を煮ます。中弱火で5〜7秒、優しく混ぜてください。実際の調理時間を短縮したゲーム表現です。','片栗粉小さじ1を倍量の水で溶いたものを基準量として投入。①弱火・消火 ②回し入れて混ぜる ③強火で鍋振りしてツヤを出す。','ごま油・ラー油は各大さじ1弱を目安に。万能ねぎ・花椒はお好みで。追加の香草も自由、仕上げは採点しません。','作った具材を中華皿に盛り付け。360度ゆっくり鑑賞できます。'];
 // Web Audio：五音音階の撥弦＋笛＋打楽器。自作ノイズによる料理SE。
 let audioOn=true,ac=null,master=null,music=null,noiseBuf=null,hiss=null,hissGain=null,musicTimer=null,noteIndex=0;
 function note(freq,start,duration,volume,type='sine',dest=music){if(!ac||!audioOn)return;const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(freq,start);g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),start+.014);g.gain.exponentialRampToValueAtTime(.0001,start+duration);o.connect(g);g.connect(dest||master);o.start(start);o.stop(start+duration+.02);}
@@ -535,7 +586,11 @@ if(stage===5||stage===6)plateButtons();
 $('bottom').style.display=stage===6?'none':'flex';$('result').style.display=stage===6?'block':'none';}
 function setHeat(){heat=+$('heat').value/100;$('heattext').textContent=(heat===0?'消火':heat<.3?'弱火':heat<.75?'中火':'強火')+' '+Math.round(heat*100)+'%';if(stage===4&&heat<.3&&starch<.015){lowFirst=true;starchStep=Math.max(1,starchStep);}}
 const originalSetHeat=setHeat;
-setHeat=function(){originalSetHeat();$('dialneedle').style.transform=`rotate(${-135+heat*270}deg)`;$('heatdial').setAttribute('aria-valuenow',String(Math.round(heat*100)));$('heatdial').setAttribute('aria-valuetext',$('heattext').textContent);};
+setHeat=function(){originalSetHeat();$('dialneedle').style.transform=`rotate(${-135+heat*270}deg)`;$('heatdial').setAttribute('aria-valuenow',String(Math.round(heat*100)));$('heatdial').setAttribute('aria-valuetext',$('heattext').textContent);
+ const level=heat===0?0:heat<.3?20:heat<.75?50:90;
+ $('mobileHeatButtons').querySelectorAll('button').forEach(b=>{const active=+b.dataset.heat===level;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
+};
+$('mobileHeatButtons').addEventListener('click',e=>{const b=e.target.closest('button[data-heat]');if(!b)return;$('heat').value=b.dataset.heat;setHeat();});
 $('heat').oninput=setHeat;$('off').onclick=()=>{$('heat').value=0;setHeat();};
 let dialDrag=null;
 const dial=$('heatdial');
@@ -644,6 +699,25 @@ canvas.addEventListener('pointerdown',()=>{
  if(innerWidth<=700&&!fullscreenAttempted){fullscreenAttempted=true;enterFullscreen(false);}
 },{capture:true});
 */
+// ブラウザのバーは通常ページから強制的に隠せない。ユーザー操作で全画面APIを要求。
+$('fullscreen').onclick=async()=>{
+ try{
+  if(document.fullscreenElement||document.webkitFullscreenElement){
+   const exit=document.exitFullscreen||document.webkitExitFullscreen;
+   if(exit)await exit.call(document);
+  }else{
+   const root=document.documentElement,request=root.requestFullscreen||root.webkitRequestFullscreen;
+   if(!request){toast('このブラウザでは全画面にできません。ホーム画面に追加して開くと、アドレスバーなしで利用できる場合があります。');return;}
+   await request.call(root);
+  }
+ }catch{toast('全画面表示が許可されません。公開URLを直接開くか、ホーム画面への追加をお試しください。');}
+};
+function updateFullscreenUI(){
+ $('fullscreen').textContent=(document.fullscreenElement||document.webkitFullscreenElement)?'⛶ 戻す':'⛶ 全画面';
+ requestAnimationFrame(()=>{resize();positionHeatDial();});
+}
+document.addEventListener('fullscreenchange',updateFullscreenUI);
+document.addEventListener('webkitfullscreenchange',updateFullscreenUI);
 // 説明は必要なときだけ開く。工程を変えても開閉状態を維持する。
 $('helpToggle').onclick=()=>{
  const open=$('help').hidden;
@@ -1010,7 +1084,33 @@ for(let i=0;i<recipe.length;i++){const p=recipe[i];if(isHerb(p.type)&&area(p.pol
 }
 for(const c of clumps)ball(c.x,(stage>=5?platedSurface(c.x,c.z)+.02:1.23)+offset,c.z,c.r,'#f7e9cc');
 for(let i=0;i<garnish.length;i++){const g=garnish[i];if(garnish.length>450&&i%2){ball(g.x,(stage>=5?platedSurface(g.x,g.z)+.10+Math.min(.18,Math.max(0,g.y-1.25)):g.y)+offset,g.z,g.r,topDefs.find(d=>d[0]===g.type)?.[2]||'#689447',.55);}else toppingModel(g.type,g.x,(stage>=5?platedSurface(g.x,g.z)+.10+Math.min(.18,Math.max(0,g.y-1.25)):g.y)+offset,g.z,g.r,g.angle);}worldOffset={x:0,y:0,z:0};renderLayer=5;}
-function positionHeatDial(){if(innerWidth<=700||stage<2||stage>4)return;/* コンロ側の定位置を使い、鍋の変位は参照しない。 */const p=project(3.55,1.2,0);const box=$('controls'),w=box.offsetWidth||128,h=box.offsetHeight||180;const minTop=$('buttons').getBoundingClientRect().bottom+10;box.style.left=clamp(p[0],8,Math.max(8,W-w-8))+'px';box.style.right='auto';box.style.top=clamp(p[1]-h/2,minTop,Math.max(minTop,H-h-85))+'px';}
+function positionHeatDial(){
+ const box=$('controls');
+ if(stage<2||stage>4){box.style.display='none';return;}
+ box.style.display='block';
+ const rect=canvas.getBoundingClientRect(),mobile=innerWidth<=700;
+ const height=box.offsetHeight||230;
+ const top=Math.max(rect.top,rect.top+(rect.height-height)/2);
+ box.style.setProperty('left','auto','important');
+ box.style.setProperty('right',mobile?'max(6px, env(safe-area-inset-right))':'10px','important');
+ box.style.setProperty('top',top+'px','important');
+ box.style.setProperty('bottom','auto','important');
+ box.style.transform='none';
+}
+function legacyPositionHeatDial(){if(stage<2||stage>4)return;
+ if(innerWidth<=700){
+  // キャンバス右下に固定。鍋の揺れには追従させず、全体を画面内へ収める。
+  const box=$('controls'),rect=canvas.getBoundingClientRect();
+  const width=box.offsetWidth||100,height=box.offsetHeight||165;
+  const grip=project(0,1.85,5.1),preferred=project(2.45,1.2,1.65);
+  const left=clamp(rect.left+Math.max(preferred[0]-width/2,grip[0]+28),rect.left+4,Math.max(rect.left+4,rect.right-width-4));
+  const top=clamp(rect.top+preferred[1]-height*.35,rect.top+4,Math.max(rect.top+4,rect.bottom-height-4));
+  box.style.setProperty('left',left+'px','important');box.style.setProperty('top',top+'px','important');
+  box.style.setProperty('right','auto','important');box.style.setProperty('bottom','auto','important');return;
+ }
+ /* PCへの回転後はモバイル用important指定を解除する。 */
+ const dialBox=$('controls');for(const key of ['left','top','right','bottom'])dialBox.style.removeProperty(key);
+ /* コンロ側の定位置を使い、鍋の変位は参照しない。 */const p=project(3.55,1.2,0);const box=$('controls'),w=box.offsetWidth||128,h=box.offsetHeight||180;const minTop=$('buttons').getBoundingClientRect().bottom+10;box.style.left=clamp(p[0],8,Math.max(8,W-w-8))+'px';box.style.right='auto';box.style.top=clamp(p[1]-h/2,minTop,Math.max(minTop,H-h-85))+'px';}
 let dialLayoutClock=0;
 function draw(){camera();if(t>=dialLayoutClock){positionHeatDial();dialLayoutClock=t+.1;}ctx.fillStyle='#171210';ctx.fillRect(0,0,W,H);let bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#332821');bg.addColorStop(1,'#120f0e');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);renderList=[];renderLayer=0;worldOffset={x:0,y:0,z:0};
 extrude(rect(0,0,19,12),-.5,.3,'#3d342b');for(let i=-5;i<6;i++)line3([i*1.7,-.195,-6],[i*1.7,-.195,6],'#29241f',.018);
@@ -1080,7 +1180,25 @@ function resize(){const r=canvas.getBoundingClientRect();W=Math.max(1,r.width);H
 const viewportObserver=new ResizeObserver(()=>{resize();});viewportObserver.observe(canvas);
 // 折り返した選択ボタンと情報パネルが重ならないよう追従。
 function positionSelectionInfo(){const buttons=$('buttons');const bottom=buttons.childElementCount?buttons.getBoundingClientRect().bottom:(W<650?58:70);document.documentElement.style.setProperty('--info-top',(bottom+12)+'px');}
-const selectionObserver=new ResizeObserver(positionSelectionInfo);selectionObserver.observe($('buttons'));
+// 折り返しではなくラベル自体を縮める。最小サイズでも長い項目は省略表示し、全文はtitleに保持。
+function fitUILabels(){
+ const mobile=innerWidth<=700;
+ document.querySelectorAll('#buttons button,#buttons .stir-group strong,#buttons .stir-group select,header button,#bgmSelect').forEach(el=>{
+  const base=mobile?(el.matches('.stir-group strong')?10:11):(el.matches('.stir-group strong')?12:14);
+  el.style.fontSize=base+'px';
+  if(!el.clientWidth)return;
+  let size=base;
+  while(el.scrollWidth>el.clientWidth+1&&size>9){size-=.5;el.style.fontSize=size+'px';}
+  el.style.overflow='hidden';el.style.textOverflow='ellipsis';
+  if(el.tagName==='BUTTON')el.title=el.textContent;
+ });
+}
+let labelFitFrame=0;
+function scheduleLabelFit(){cancelAnimationFrame(labelFitFrame);labelFitFrame=requestAnimationFrame(fitUILabels);}
+const labelObserver=new MutationObserver(scheduleLabelFit);labelObserver.observe($('buttons'),{childList:true,subtree:true});
+const selectionObserver=new ResizeObserver(()=>{positionSelectionInfo();scheduleLabelFit();});selectionObserver.observe($('buttons'));
+window.addEventListener('resize',scheduleLabelFit);
+scheduleLabelFit();
 window.addEventListener('resize',()=>{resize();positionSelectionInfo();});document.addEventListener('visibilitychange',()=>{last=performance.now();release();if(ac){if(document.hidden)ac.suspend();else if(audioOn)ac.resume();}});
 let uiClock=0;
 let lastPaint=0;
