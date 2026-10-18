@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="mobile-web-app-capable" content="yes">
 <title>麻婆豆腐シミュレーター</title>
 <style>
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}html,body{overscroll-behavior:none}canvas,button{-webkit-touch-callout:none;-webkit-user-drag:none}body{margin:0;background:#171210;color:#fff0db;font:14px system-ui,sans-serif;overflow:hidden}canvas{display:block;width:100vw;height:100dvh;touch-action:none}button,input{font:inherit}button{background:#443024;color:inherit;border:1px solid #b983493f;border-radius:9px;padding:9px 12px;cursor:pointer}button.active{background:#a04a23;border-color:#ffc878}button:disabled{opacity:.5}.panel{background:#201714e8;border:1px solid #e5b37430;border-radius:14px;backdrop-filter:blur(12px)}header{position:fixed;top:12px;left:12px;right:12px;display:flex;align-items:center;gap:14px;padding:12px 16px}h1{font-size:20px;margin:0;letter-spacing:.16em}header small{color:#d2ae87}#sound{margin-left:auto}#reset{white-space:nowrap;border-color:#dc9b6555}header{flex-wrap:wrap}@media(max-width:650px){header{gap:6px}#reset,#sound{padding:6px;font-size:11px}header h1{letter-spacing:.03em}}#info{position:fixed;left:12px;top:82px;width:285px;padding:15px;pointer-events:none}h2{font-size:17px;color:#ffd08c;margin:0 0 9px}p{line-height:1.7;margin:8px 0;font-size:12px}#stats{white-space:pre-line;font-size:12px;line-height:1.9}#progress{height:5px;background:#ffffff17;border-radius:8px;margin-top:10px;overflow:hidden}#bar{height:100%;background:#ffc474;width:0}#bottom{position:fixed;bottom:12px;left:12px;right:12px;display:flex;align-items:flex-end;gap:9px}#controls{padding:12px;flex:1;max-width:900px}#buttons{display:flex;flex-wrap:wrap;gap:5px}#heatrow{margin-top:10px;display:flex;align-items:center;gap:9px;font-size:12px}input{accent-color:#ffb563}#heat{width:150px}#next{margin-left:auto;background:#b45b29;white-space:nowrap;padding:15px}#toast{position:fixed;top:25%;left:50%;transform:translateX(-50%);padding:10px 17px;background:#3f221ce8;border-radius:10px;color:#ffd28c;opacity:0;pointer-events:none;max-width:85vw;text-align:center}#result{position:fixed;right:15px;top:85px;width:330px;padding:20px;display:none;max-height:calc(100dvh - 105px);overflow:auto}#score{font-size:48px;font-weight:bold;color:#ffcd85}#detail{white-space:pre-line;line-height:1.8;font-size:12px}#boot{position:fixed;inset:0;background:#171210e8;display:grid;place-items:center;text-align:center;z-index:10}#boot>div{padding:25px;max-width:470px}#start{font-size:18px;padding:15px 30px;background:#a54d25}#audiohint{color:#d6b58e}#meters{margin-top:8px;font-size:11px}.meter{display:flex;gap:7px;align-items:center;margin-top:4px}.meter span{width:72px}.meter i{height:5px;display:block;background:#efb46b;border-radius:8px;max-width:130px}
@@ -62,9 +63,28 @@
  body[data-stage="6"]{grid-template-rows:auto auto auto minmax(320px,54svh) auto}
  #toast{position:fixed}
 }
+/* タッチ端末：選択・長押しメニューを無効化。説明の縦スクロールは維持する。 */
+html,body,body *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+button,select{touch-action:manipulation}
+html:fullscreen{width:100%;height:100%;background:#171210}
+#fullscreen{white-space:nowrap}
+@media(max-width:700px){
+ body{width:100%;min-height:100dvh;padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right))}
+ header.panel{gap:6px}
+ header #fullscreen{font-size:11px;min-height:36px;padding:7px 10px;border-color:#ffc87880}
+ header #reset,header #sound{min-height:36px;padding:7px 9px}
+ header #bgmSelect{min-height:36px}
+ #buttons button{min-height:40px;padding:9px 11px}
+ #buttons,#buttons:has(.stir-group){gap:8px}
+ .stir-group{gap:8px}
+ #bottom{gap:12px;margin-top:5px}
+ #next{min-height:48px;padding:14px 16px}
+ #view{isolation:isolate;position:relative}
+ body[data-immersive="true"] header small{display:none}
+}
 </style></head><body>
 <canvas id="view" aria-label="麻婆豆腐の調理場"></canvas>
-<header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
+<header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="fullscreen" type="button" title="スマホの全画面表示を切り替える">⛶ 全画面</button><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
 <section id="info" class="panel"><h2 id="title"></h2><p id="help"></p><div id="stats"></div><div id="meters"></div><div id="progress"><div id="bar"></div></div></section>
 <div id="buttons" aria-label="具材と調理道具の選択"></div>
 <div id="bottom"><div id="controls" class="panel"><div id="heatrow"><label id="heatlabel" for="heat">火加減</label><input id="heat" type="range" min="0" max="100" value="0" tabindex="-1" aria-hidden="true"><button id="heatdial" type="button" role="slider" aria-labelledby="heatlabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="ダイヤルを回す／上下にドラッグ。矢印キーでも調整できます"><span id="dialneedle"></span></button><div id="diallabels">消火 · 弱 · 中 · 強</div><span id="heattext"></span><button id="off">消火</button></div></div><button id="next">仕込み開始 →</button></div>
@@ -581,7 +601,41 @@ release();if(stage>0&&stage<5)scores.push(quality()*100);stage++;elapsed=0;$('he
  for(const p of recipe)containFood(p);
  stirHerbs=[];
 }if(stage===4){tool='bowl';lastMix=t;setHeat();}if(stage===5)tool='sesame';if(stage===6)finish();ui();}
-$('next').onclick=next;function restartGame(){location.reload();}$('restart').onclick=restartGame;$('reset').onclick=restartGame;
+$('next').onclick=next;function restartGame(){location.reload();}$('restart').onclick=restartGame;$('reset').onclick=()=>{release();if(confirm('調理を最初からやり直しますか？'))restartGame();};
+// 全画面APIはユーザー操作が必要。対応端末では最初の調理タッチで一度だけ要求。
+// 埋め込み側が全画面を許可しない場合やiPhoneでは通常表示で操作を継続する。
+let fullscreenAttempted=false;
+function syncFullscreen(){
+ const active=!!(document.fullscreenElement||document.webkitFullscreenElement);
+ document.body.dataset.immersive=String(active);
+ $('fullscreen').textContent=active?'⛶ 全画面を終了':'⛶ 全画面';
+ requestAnimationFrame(()=>{resize();positionSelectionInfo();});
+}
+async function enterFullscreen(explicit=false){
+ const root=document.documentElement;
+ const request=root.requestFullscreen||root.webkitRequestFullscreen;
+ if(!request){if(explicit)toast('このブラウザでは全画面化に制限があります。「ホーム画面に追加」して開く方法もお試しください。');return;}
+ try{await request.call(root);syncFullscreen();}
+ catch{if(explicit)toast('全画面表示が許可されません。ゲームを公開URLで直接開いてお試しください。');}
+}
+$('fullscreen').onclick=async()=>{
+ if(document.fullscreenElement||document.webkitFullscreenElement){
+  const exit=document.exitFullscreen||document.webkitExitFullscreen;
+  if(exit)try{await exit.call(document);}catch{}
+ }else{fullscreenAttempted=true;await enterFullscreen(true);}
+};
+document.addEventListener('fullscreenchange',syncFullscreen);
+document.addEventListener('webkitfullscreenchange',syncFullscreen);
+canvas.addEventListener('pointerdown',()=>{
+ if(innerWidth<=700&&!fullscreenAttempted){fullscreenAttempted=true;enterFullscreen(false);}
+},{capture:true});
+// ダブルタップや長押しで文字が青く選択されるのを抑止。
+// pointerイベントは残すため、連続タップ・切断・スクロールを妨げない。
+document.addEventListener('selectstart',e=>e.preventDefault());
+document.addEventListener('dragstart',e=>e.preventDefault());
+document.addEventListener('dblclick',e=>{e.preventDefault();window.getSelection()?.removeAllRanges();},{passive:false});
+canvas.addEventListener('pointerdown',()=>window.getSelection()?.removeAllRanges(),{capture:true});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
 function flip(speed){if(t-lastFlip<.25)return;lastFlip=t;flips++;agitation=1;noiseSE('pan',.7);let excess=speed>11;for(const p of meat){if(p.out)continue;if(!p.sauce&&meatLoosen<.15)continue;p.vy=rnd(2.3,4.2);p.vx=rnd(-1,1)*(excess?4:1);p.vz=rnd(-1,1)*(excess?4:1);if(excess&&Math.random()<.08){p.out=true;lost=clamp(lost+1/130);}}for(const p of stirHerbs){p.vy=rnd(1.1,2);p.vx+=rnd(-.3,.3);p.vz+=rnd(-.3,.3);}for(const p of recipe){p.vy=rnd(.5,1);p.vx+=rnd(-.3,.3);p.vz+=rnd(-.3,.3);}if(stage===4&&heat>.75&&mix>.65&&starch>.25){glaze=clamp(glaze+.16);emulsify++;starchStep=3;}if(excess)toast('振りすぎ！具材が鍋の外へ');}
 function emitTop(id,x,z,count=1){chosenTops.add(id);for(let i=0;i<count;i++){drops.push({x:x+rnd(-.15,.15),z:z+rnd(-.15,.15),y:3,vy:rnd(-1,-.5),vx:rnd(-.12,.12),vz:rnd(-.12,.12),type:id,r:id==='cilantro'?.16:id==='threads'?.07:.055});topAmounts[id]+=(id==='cilantro'?.022:id==='threads'?.012:.009);}noiseSE(id==='pepper'?'grind':'pour',.22);}
 // 木柄の投影と同じ位置にだけ、画面上の掴み判定を置く。
