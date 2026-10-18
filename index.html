@@ -82,10 +82,23 @@ html:fullscreen{width:100%;height:100%;background:#171210}
  #view{isolation:isolate;position:relative}
  body[data-immersive="true"] header small{display:none}
 }
+/* 全画面化せず、スマホでは採点だけを画面上端に固定する。 */
+#mobileScore{display:none}
+#help[hidden]{display:none!important}
+#helpToggle{pointer-events:auto;font-size:11px;padding:5px 9px;margin:0 0 5px}
+@media(max-width:700px){
+ body{padding-top:calc(54px + env(safe-area-inset-top))}
+ #mobileScore{display:flex;position:fixed;top:0;left:0;right:0;z-index:40;min-height:48px;padding:calc(9px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 9px max(14px,env(safe-area-inset-left));align-items:center;justify-content:space-between;gap:12px;border-radius:0 0 12px 12px;background:#201714fa;pointer-events:none}
+ #mobileScore span{font-size:12px;color:#d2ae87}
+ #mobileScoreValue{font-size:17px;color:#ffd08c;font-variant-numeric:tabular-nums}
+ #info h2{font-size:13px}
+ #helpToggle{min-height:36px;font-size:12px}
+}
 </style></head><body>
 <canvas id="view" aria-label="麻婆豆腐の調理場"></canvas>
-<header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="fullscreen" type="button" title="スマホの全画面表示を切り替える">⛶ 全画面</button><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
-<section id="info" class="panel"><h2 id="title"></h2><p id="help"></p><div id="stats"></div><div id="meters"></div><div id="progress"><div id="bar"></div></div></section>
+<header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
+<section id="mobileScore" class="panel" aria-label="現在の採点"><span>採点</span><strong id="mobileScoreValue">—</strong></section>
+<section id="info" class="panel"><h2 id="title"></h2><button id="helpToggle" type="button" aria-controls="help" aria-expanded="false">説明を表示</button><p id="help" hidden></p><div id="stats"></div><div id="meters"></div><div id="progress"><div id="bar"></div></div></section>
 <div id="buttons" aria-label="具材と調理道具の選択"></div>
 <div id="bottom"><div id="controls" class="panel"><div id="heatrow"><label id="heatlabel" for="heat">火加減</label><input id="heat" type="range" min="0" max="100" value="0" tabindex="-1" aria-hidden="true"><button id="heatdial" type="button" role="slider" aria-labelledby="heatlabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="ダイヤルを回す／上下にドラッグ。矢印キーでも調整できます"><span id="dialneedle"></span></button><div id="diallabels">消火 · 弱 · 中 · 強</div><span id="heattext"></span><button id="off">消火</button></div></div><button id="next">仕込み開始 →</button></div>
 <div id="toast" role="status"></div>
@@ -602,6 +615,7 @@ release();if(stage>0&&stage<5)scores.push(quality()*100);stage++;elapsed=0;$('he
  stirHerbs=[];
 }if(stage===4){tool='bowl';lastMix=t;setHeat();}if(stage===5)tool='sesame';if(stage===6)finish();ui();}
 $('next').onclick=next;function restartGame(){location.reload();}$('restart').onclick=restartGame;$('reset').onclick=()=>{release();if(confirm('調理を最初からやり直しますか？'))restartGame();};
+/* 全画面機能は削除。
 // 全画面APIはユーザー操作が必要。対応端末では最初の調理タッチで一度だけ要求。
 // 埋め込み側が全画面を許可しない場合やiPhoneでは通常表示で操作を継続する。
 let fullscreenAttempted=false;
@@ -629,6 +643,15 @@ document.addEventListener('webkitfullscreenchange',syncFullscreen);
 canvas.addEventListener('pointerdown',()=>{
  if(innerWidth<=700&&!fullscreenAttempted){fullscreenAttempted=true;enterFullscreen(false);}
 },{capture:true});
+*/
+// 説明は必要なときだけ開く。工程を変えても開閉状態を維持する。
+$('helpToggle').onclick=()=>{
+ const open=$('help').hidden;
+ $('help').hidden=!open;
+ $('helpToggle').textContent=open?'説明を非表示':'説明を表示';
+ $('helpToggle').setAttribute('aria-expanded',String(open));
+ positionSelectionInfo();
+};
 // ダブルタップや長押しで文字が青く選択されるのを抑止。
 // pointerイベントは残すため、連続タップ・切断・スクロールを妨げない。
 document.addEventListener('selectstart',e=>e.preventDefault());
@@ -1044,7 +1067,13 @@ if(stage===2){text=`${aromaProgress<1?'① 香味野菜を油で炒める':cook<
 if(stage===3){text=`絹ごし豆腐230g / 厚み${tofuHeightCm.toFixed(1)}cm\n鶏ガラスープ160ml・砂糖ひとつまみ\n適温煮込み ${simmer.toFixed(1)}秒（目安5〜7秒）\nスープ残量 ${Math.round(soup*100)}%（目安76%）\n豆腐の崩壊 ${Math.round(damage*100)}%\n工程評価 ${Math.round(quality()*100)} / 100`;q=quality();}
 if(stage===4){text=`① 弱火・消火 ${lowFirst?'✓':'未達'}\n② 片栗粉 ${Math.round(starch/.58*100)}% / 基準：小さじ1＋水小さじ2\n回し入れ ${(pourCircle/TAU).toFixed(1)}周 / 撹拌 ${Math.round(mix*100)}%\n白いダマ ${clumps.length}個\n③ 強火鍋振り ${emulsify}回 / ツヤ ${Math.round(glaze*100)}%\nとろみ ${Math.round(viscosity*100)}% · ${viscosity<.25?'サラサラ':viscosity<.65?'とろみが出てきた':'ドロッと濃厚なあん'}\n工程評価 ${Math.round(quality()*100)} / 100`;q=quality();}
 if(stage===5){text='上部の皿ボタンでデザインを即時変更\nごま油：ふちに沿って円ドラッグ\n花椒：左右往復 / ラー油：タップ・なぞる\n青ネギ・パクチー：タップ\n糸唐辛子：ドラッグで中央へ\n仕上げは採点なし。好きな量でどうぞ。';for(const [id,name,,target]of topDefs){let row=document.createElement('div');row.className='meter';let span=document.createElement('span');span.textContent=name+' '+Math.round(topAmounts[id]*100);let bar=document.createElement('i');bar.style.width=Math.min(130,topAmounts[id]/target*65)+'px';bar.style.background='#efb46b';row.append(span,bar);$('meters').append(row);}q=quality();}
-if(stage===6){text='一品ずつ刻んだ、世界に一つだけの麻婆。\n360度の自動周回で仕上がりを鑑賞。';q=1;}$('stats').textContent=text;$('bar').style.width=clamp(q)*100+'%';}
+if(stage===6){text='一品ずつ刻んだ、世界に一つだけの麻婆。\n360度の自動周回で仕上がりを鑑賞。';q=1;}$('stats').textContent=text;$('bar').style.width=clamp(q)*100+'%';
+let scoreText='採点前';
+if(stage>=1&&stage<=4)scoreText=Math.round(quality()*100)+' / 100点';
+else if(stage===5)scoreText='仕上げ：採点なし';
+else if(stage===6)scoreText=$('score').textContent;
+$('mobileScoreValue').textContent=scoreText;
+}
 function finish(){drops=[];steam=[];let total=Math.round(scores.reduce((a,b)=>a+b,0)/Math.max(1,scores.length)),rank=total>=90?'特級':total>=75?'上級':total>=55?'中級':'見習い';let name='手仕込みの四川風麻婆豆腐';if(selected.has('cheese')&&topAmounts.sesame>.1)name='コクと香りが引き立つ！まろやかチーズ麻婆豆腐';if((selected.has('negi')||topAmounts.scallion>.6)&&topAmounts.pepper>.55)name='痺れる旨さ！山盛りネギの本格四川風麻婆豆腐';if(topAmounts.cilantro>.4)name='香草が踊る！パクチーたっぷり麻婆豆腐';if(selected.size===ingredients.length&&topDefs.every(x=>topAmounts[x[0]]>.015))name='全具材＆トッピング制覇！神の領域の特級麻婆豆腐';$('dishname').textContent=name;$('score').textContent=total+'点 · '+rank;let reviews=[total>=80?'香りと食感が調和した、見事な職人の一皿。':'切り方も火加減も、あなただけの味わいになりました。'];if(selected.has('eggplant'))reviews.push('なすが旨辛のあんを吸い込み、ジューシー。');if(selected.has('cheese'))reviews.push('チーズのコクが刺激をやさしく包みます。');if(selected.has('shimeji'))reviews.push('しめじの旨味が奥行きをプラス。');if(topAmounts.pepper>.65)reviews.push('花椒ドバ盛りの、痺れを愛する仕上がり！');if(topAmounts.scallion>.65)reviews.push('ネギだくの鮮やかな香りと食感。');if(topAmounts.chili>.65)reviews.push('ラー油たっぷり、燃えるような辛さ。');if(topAmounts.threads>.1)reviews.push('糸唐辛子が中央を華やかに彩ります。');if(burn>.25)reviews.push('次は焦げる前に撹拌と鍋振りを。');if(damage>.25)reviews.push('おたまをゆっくり滑らせると、豆腐をもっと美しく保てます。');if(clumps.length>6)reviews.push('片栗粉は弱火で回し入れ、すぐ優しく混ぜましょう。');if(glaze>.7)reviews.push('強火で乳化したツヤが食欲を誘います。');$('review').textContent=reviews.join(' ');$('detail').textContent=['包丁（サイコロ50点基準を正規化）','炒め・キツネ色と醤','煮込み・残量と豆腐保護','とろみ・手順と乳化'].map((s,i)=>s+'\n'+scores[i].toFixed(1)+' / 100').join('\n')+'\n\n総合：4工程の平均 / 100点\n仕上げトッピング：採点対象外（自由な盛り付け）';if(ac){let now=ac.currentTime;[0,4,7,12].forEach((v,i)=>note(261.6*2**(v/12),now+i*.12,.6,.07,'triangle',master));}}
 function resize(){const r=canvas.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);DPR=Math.min(devicePixelRatio||1,1);canvas.width=Math.round(W*DPR);canvas.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);camera();}
 // UIの折り返し・工程切替・端末回転で描画領域が変わっても投影とタッチ座標を一致させる。
