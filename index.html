@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>麻婆豆腐シミュレーター</title>
+<style>
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}html,body{overscroll-behavior:none}canvas,button{-webkit-touch-callout:none;-webkit-user-drag:none}body{margin:0;background:#171210;color:#fff0db;font:14px system-ui,sans-serif;overflow:hidden}canvas{display:block;width:100vw;height:100dvh;touch-action:none}button,input{font:inherit}button{background:#443024;color:inherit;border:1px solid #b983493f;border-radius:9px;padding:9px 12px;cursor:pointer}button.active{background:#a04a23;border-color:#ffc878}button:disabled{opacity:.5}.panel{background:#201714e8;border:1px solid #e5b37430;border-radius:14px;backdrop-filter:blur(12px)}header{position:fixed;top:12px;left:12px;right:12px;display:flex;align-items:center;gap:14px;padding:12px 16px}h1{font-size:20px;margin:0;letter-spacing:.16em}header small{color:#d2ae87}#sound{margin-left:auto}#reset{white-space:nowrap;border-color:#dc9b6555}header{flex-wrap:wrap}@media(max-width:650px){header{gap:6px}#reset,#sound{padding:6px;font-size:11px}header h1{letter-spacing:.03em}}#info{position:fixed;left:12px;top:82px;width:285px;padding:15px;pointer-events:none}h2{font-size:17px;color:#ffd08c;margin:0 0 9px}p{line-height:1.7;margin:8px 0;font-size:12px}#stats{white-space:pre-line;font-size:12px;line-height:1.9}#progress{height:5px;background:#ffffff17;border-radius:8px;margin-top:10px;overflow:hidden}#bar{height:100%;background:#ffc474;width:0}#bottom{position:fixed;bottom:12px;left:12px;right:12px;display:flex;align-items:flex-end;gap:9px}#controls{padding:12px;flex:1;max-width:900px}#buttons{display:flex;flex-wrap:wrap;gap:5px}#heatrow{margin-top:10px;display:flex;align-items:center;gap:9px;font-size:12px}input{accent-color:#ffb563}#heat{width:150px}#next{margin-left:auto;background:#b45b29;white-space:nowrap;padding:15px}#toast{position:fixed;top:25%;left:50%;transform:translateX(-50%);padding:10px 17px;background:#3f221ce8;border-radius:10px;color:#ffd28c;opacity:0;pointer-events:none;max-width:85vw;text-align:center}#result{position:fixed;right:15px;top:85px;width:330px;padding:20px;display:none;max-height:calc(100dvh - 105px);overflow:auto}#score{font-size:48px;font-weight:bold;color:#ffcd85}#detail{white-space:pre-line;line-height:1.8;font-size:12px}#boot{position:fixed;inset:0;background:#171210e8;display:grid;place-items:center;text-align:center;z-index:10}#boot>div{padding:25px;max-width:470px}#start{font-size:18px;padding:15px 30px;background:#a54d25}#audiohint{color:#d6b58e}#meters{margin-top:8px;font-size:11px}.meter{display:flex;gap:7px;align-items:center;margin-top:4px}.meter span{width:72px}.meter i{height:5px;display:block;background:#efb46b;border-radius:8px;max-width:130px}
+@media(max-width:650px){header{padding:10px}h1{font-size:16px}header small{display:none}#info{top:70px;width:218px;padding:11px}h2{font-size:14px}#stats,p{font-size:11px}#bottom{left:8px;right:8px;bottom:8px}#controls{padding:8px;max-width:calc(100% - 96px);max-height:180px;overflow:auto}button{padding:7px 9px;font-size:11px}#next{padding:14px 9px}#heat{width:105px}#result{top:72px;right:8px;width:258px;padding:14px}#score{font-size:39px}#heatrow{gap:5px;flex-wrap:wrap}.meter i{max-width:80px}}
+/* 選択ボタンは上部中央、火加減と進行ボタンは下部に配置。 */
+#buttons{position:fixed;top:78px;left:50%;transform:translateX(-50%);z-index:4;width:max-content;max-width:calc(100vw - 32px);display:flex;justify-content:center;flex-wrap:wrap;gap:6px;padding:10px;background:#201714ed;border:1px solid #e5b37430;border-radius:14px;max-height:26dvh;overflow:auto}
+#buttons:empty{display:none}
+.stir-group{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;width:100%}.stir-group strong{font-size:12px;color:#ffd08c;min-width:74px}.stir-group select{font:inherit;max-width:100%;padding:8px;border:1px solid #b9834966;border-radius:8px;background:#443024;color:#fff0db}.stir-group button{padding:7px 10px}
+#buttons:has(.stir-group){width:min(760px,calc(100vw - 24px));max-height:33dvh}
+#info{top:var(--info-top,146px)}
+#controls{flex:0 1 auto;max-width:none}
+#controls:has(#heatrow[style*="none"]){display:none}
+@media(max-width:650px){#buttons{top:66px;max-width:calc(100vw - 16px);padding:8px;gap:5px}#controls{max-width:calc(100% - 96px)}#info{top:var(--info-top,140px)}}
+/* 鍋の右側に置く独立した火力ダイヤル。 */
+#bottom #controls{position:fixed;right:12px;bottom:auto;max-width:none;width:128px;padding:10px;z-index:5}
+#heatrow{margin:0;flex-direction:column;gap:5px;text-align:center}
+#heatdial{position:relative;width:78px;height:78px;border-radius:50%;padding:0;touch-action:none;user-select:none;background:radial-gradient(circle at 35% 28%,#7d7972,#363430 62%,#171715);border:3px solid #bba77d;box-shadow:0 3px 9px #0009,inset 0 0 0 5px #25231f;cursor:grab}
+#heatdial:active{cursor:grabbing}
+#dialneedle{position:absolute;left:calc(50% - 2px);top:8px;width:4px;height:22px;background:#ffcc80;border-radius:3px;transform-origin:2px 31px;transform:rotate(-135deg);pointer-events:none}
+#diallabels{font-size:10px;color:#d6b58e;white-space:nowrap}
+#heattext{font-size:12px;font-variant-numeric:tabular-nums}
+#heatrow #off{padding:5px 12px}
+#heat{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+@media(max-width:650px){#bottom #controls{width:100px;padding:7px;max-height:none;overflow:visible}#heatdial{width:66px;height:66px}#dialneedle{top:6px;height:19px;transform-origin:2px 27px}#diallabels{font-size:9px}}
+</style></head><body>
+<canvas id="view" aria-label="麻婆豆腐の調理場"></canvas>
+<header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
+<section id="info" class="panel"><h2 id="title"></h2><p id="help"></p><div id="stats"></div><div id="meters"></div><div id="progress"><div id="bar"></div></div></section>
+<div id="buttons" aria-label="具材と調理道具の選択"></div>
+<div id="bottom"><div id="controls" class="panel"><div id="heatrow"><label id="heatlabel" for="heat">火加減</label><input id="heat" type="range" min="0" max="100" value="0" tabindex="-1" aria-hidden="true"><button id="heatdial" type="button" role="slider" aria-labelledby="heatlabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="ダイヤルを回す／上下にドラッグ。矢印キーでも調整できます"><span id="dialneedle"></span></button><div id="diallabels">消火 · 弱 · 中 · 強</div><span id="heattext"></span><button id="off">消火</button></div></div><button id="next">仕込み開始 →</button></div>
+<div id="toast" role="status"></div>
+<section id="result" class="panel"><h2 id="dishname"></h2><div id="score"></div><p id="review"></p><div id="detail"></div><button id="restart">もう一度つくる</button></section>
+
+<script>
+// メイン処理の構文・実行エラーも捕捉できるよう、別スクリプトで先に登録。
+(function(){
+  function showError(message){
+    var box=document.getElementById('engine-error');
+    if(!box){
+      box=document.createElement('div');box.id='engine-error';box.setAttribute('role','alert');
+      box.style.cssText='position:fixed;z-index:100;left:12px;right:12px;top:85px;max-height:65vh;overflow:auto;padding:20px;background:#331b16;color:#fff0db;border:1px solid #e99563;border-radius:12px;white-space:pre-wrap;font:14px/1.7 system-ui';
+      document.body.appendChild(box);
+    }
+    box.textContent='調理画面でエラーが発生しました。\n'+message+'\n\nページを再読み込みしても続く場合は、このエラー内容をお知らせください。';
+    console.error(message);
+  }
+  window.addEventListener('error',function(e){showError(e.message+(e.lineno?'\n行: '+e.lineno:''));});
+  window.addEventListener('unhandledrejection',function(e){showError(String(e.reason&&e.reason.message||e.reason));});
+})();
+</script>
+<script>
+'use strict';
+// 外部依存なし。透視投影・押し出しポリゴン・照明・影・簡易物理をCanvas 2Dで実装。
+const $=id=>document.getElementById(id),canvas=$('view'),ctx=canvas.getContext('2d');
+if(!ctx)throw new Error('Canvas 2Dを初期化できません。対応ブラウザで開いてください。');
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),rnd=(a,b)=>a+Math.random()*(b-a),TAU=Math.PI*2;
+const ingredients=[['negi','長ネギ','#acd66a','mince'],['nira','ニラ','#479f45','mince'],['ginger','しょうが','#ddbd70','mince'],['garlic','にんにく','#eee2ba','mince']];
+function ingredientPosition(i){return {x:(i-(ingredients.length-1)/2)*2.8,z:0};}
+function freeKnife(){return stage===1&&isHerb(current());}
+const names={tofu:'豆腐',...Object.fromEntries(ingredients.map(x=>[x[0],x[1]]))};
+const topDefs=[['sesame','ごま油','#e4b743',.42],['pepper','花椒','#63382b',.3],['chili','ラー油','#ee4c20',.3],['scallion','青ネギ','#58b347',.38],['cilantro','パクチー','#3d9c55',.25],['threads','糸唐辛子','#ca3329',.25]];
+let W,H,DPR,stage=0,elapsed=0,t=0,last=0,heat=0,selected=new Set(),queue=[],prep=0,pieces=[],recipe=[],meat=[],drops=[],steam=[],garnish=[],clumps=[];
+const portions=Object.fromEntries(ingredients.map(d=>[d[0],0]));
+// レシピ基準：1〜2人分。調味料は加熱・撹拌の進行に合わせて投入する。
+const recipeSpec={tofu:230,beef:50,broth:160,douban:1};
+let aromaProgress=0,seasoningProgress=0,aromaStarted=false,sauceStarted=false,brothAdded=false;
+let doubanAmount=0;
+selected.add('negi');portions.negi=1;
+let saladOilAdded=false,cutIngredientsAdded=false,seasoningsAdded=false,beefAdded=false;
+const seasoningDefs=[
+ ['touchi','豆豉醤','大さじ1強'],['douban','豆板醤','小さじ1'],
+ ['soy','しょうゆ','大さじ1'],['wine','紹興酒','大さじ1'],
+ ['broth','鶏ガラスープ','160ml'],['sugar','砂糖','ひとつまみ'],
+ ['sesame','ごま油','大さじ1弱'],['chili','ラー油','大さじ1弱']
+];
+const seasoningAmounts=Object.fromEntries(seasoningDefs.map(d=>[d[0],0]));
+let selectedSeasoning='touchi';
+function spawnBeef(){
+ for(let i=0;i<130;i++){
+  const x=(i%13-6)*.13,z=(Math.floor(i/13)-4.5)*.13;
+  meat.push({x,z,bx:x,bz:z,y:wokHeight(Math.hypot(x,z))+.13,vx:0,vz:0,vy:0,r:rnd(.085,.105),color:i%3?'#ed817b':'#d94e52',sauce:false,out:false});
+ }
+}
+function addStirIngredient(kind){
+ if(stage!==2)return;
+ if(kind==='oil'){if(saladOilAdded)return;saladOilAdded=true;animateIngredient('oil');toast('サラダ油 大さじ1〜2を入れました');}
+ if(kind==='cut'){
+  if(cutIngredientsAdded)return;
+  if(!saladOilAdded){toast('先にサラダ油を入れてください');return;}
+  cutIngredientsAdded=true;
+  stirHerbs=pieces.filter(p=>isHerb(p.type)).map(p=>{
+   // 刻んだ全断片の輪郭・厚み・食材種・相対配置をそのまま継承する。
+   const poly=p.poly.map(v=>({x:v.x*.47,z:v.z*.47}));
+   return {...p,poly,h:p.h*.66,y:2.4,vx:0,vz:0,vy:0};
+  });
+  animateIngredient('herbs');
+  toast('工程1で刻んだ香味野菜を投入：'+([...selected].map(id=>names[id]).join('・')||'選択なし'));
+ }
+ if(kind==='beef'){
+  if(beefAdded)return;
+  if(!saladOilAdded){toast('先にサラダ油を入れてください');return;}
+  beefAdded=true;spawnBeef();animateIngredient('beef');toast('牛ひき肉50gをブロック状で投入しました');
+ }
+ noiseSE('pour',.4);ui();status();
+}
+function addSelectedSeasoning(){
+ if(stage!==2)return;
+ const id=selectedSeasoning,def=seasoningDefs.find(d=>d[0]===id);
+ if(id==='douban'){
+  const before=doubanAmount;addDouban();seasoningAmounts.douban=doubanAmount;
+  if(doubanAmount>before){animateIngredient('douban');toast('豆板醤 小さじ¼を追加（合計 '+doubanAmount.toFixed(2)+'）');}
+ }else{
+  if(seasoningAmounts[id]>=1){toast(def[1]+'は基準量を投入済みです');return;}
+  seasoningAmounts[id]=1;animateIngredient(id);noiseSE('pour',.4);
+  if(id==='touchi')for(let i=0;i<18;i++){const a=i*2.39996,r=.2+(i%5)*.22;meat.push({x:Math.cos(a)*r,z:Math.sin(a)*r,y:2.6,vx:0,vz:0,vy:-1,r:.055,color:'#87422b',sauce:true,out:false});}
+  if(id==='broth')brothAdded=true;
+  if(id==='sesame'||id==='chili'){
+   glaze=clamp(glaze+.08);
+   for(let i=0;i<12;i++){const a=i*2.39996,r=.5+(i%4)*.4;garnish.push({x:Math.cos(a)*r,z:Math.sin(a)*r,y:1.25,r:.07,type:id,angle:a});}
+  }
+  toast(def[1]+' '+def[2]+'を投入しました');
+ }
+ seasoningsAdded=!!(seasoningAmounts.touchi&&seasoningAmounts.soy&&seasoningAmounts.wine);
+ ui();status();
+}
+// 刻み薬味の実体数を制限。限界後も細かさ・操作回数の評価を継続する。
+// 上限到達を理由に切断を無効化しない。描画はバッチ化したまま維持。
+const HERB_LIMIT=Infinity;
+let stirHerbs=[],seasoningFilms=[],pourAnimation=null;
+function isHerb(type){return ['negi','nira','ginger','garlic'].includes(type);}
+// 厚みは仕込み時・投入時とも1cm固定。切った豆腐をそのまま1セット投入。
+const TOFU_SCALE=2.8/8.3;
+const tofuHeightCm=1;
+let knifeDirection='horizontal',tofuLayerCut=false;
+function cutTofuThickness(){
+ if(stage!==1||current()!=='tofu')return;
+ if(tofuLayerCut){toast('横切り済みです。高さは選択欄から調整できます。');return;}
+ const source=pieces.filter(p=>p.type==='tofu');
+ const targetH=tofuHeightCm*TOFU_SCALE,copies=[];
+ for(const p of source){
+  p.h=targetH;const copy={...p,poly:p.poly.map(v=>({x:v.x,z:v.z})),vx:0,vz:0,vy:0,y:.29};
+  // 二枚を前後に分けて置き、両方を引き続き刻めるようにする。
+  p.poly=p.poly.map(v=>({x:v.x,z:v.z-1.4}));copy.poly=copy.poly.map(v=>({x:v.x,z:v.z+1.4}));copies.push(copy);
+ }
+ pieces.push(...copies);tofuLayerCut=true;noiseSE('cut',.8);toast(tofuHeightCm.toFixed(1)+'cm厚の2枚に横切りしました');ui();status();
+}
+function tofuAmountMultiplier(){return 1;}
+const plateThemes=[
+ {name:'青花の中華皿',body:'#faf9ec',inner:'#f0f1e5',shade:'#d0ddd8',ink:'#254f78',gold:'#b18a47',flower:'#ad4736'},
+ {name:'朱赤と金の中華皿',body:'#a92f25',inner:'#bd4131',shade:'#70261f',ink:'#f0c269',gold:'#f3d18a',flower:'#f6cf7b'},
+ {name:'黒釉の中華皿',body:'#303a3c',inner:'#41494a',shade:'#171f22',ink:'#b4ced0',gold:'#c7a467',flower:'#d1a361'},
+ {name:'翡翠の中華皿',body:'#a3cdb7',inner:'#c8dfcc',shade:'#6b9c8b',ink:'#316859',gold:'#bba16c',flower:'#f0e5b5'}
+];
+let plateStyle=0;
+function plateButtons(){plateThemes.forEach((theme,i)=>addButton('皿：'+theme.name,()=>{plateStyle=i;ui();},plateStyle===i));}
+function addTofuHeightControl(){
+ const text=document.createElement('span');
+ text.style.cssText='padding:8px;font-size:12px;color:#ffe3ad';
+ text.textContent='絹ごし豆腐230g・厚み1cm／牛ひき肉50g・長ネギは太め8cmを基準';
+ $('buttons').append(text);
+}
+function changePortion(id,delta=1){portions[id]=Math.max(0,portions[id]+delta);if(portions[id])selected.add(id);else selected.delete(id);ui();}
+function ellipsePoly(x,z,rx,rz,n=28){return Array.from({length:n},(_,i)=>({x:x+Math.cos(i/n*TAU)*rx,z:z+Math.sin(i/n*TAU)*rz}));}
+function addDouban(x=0,z=0){if(stage!==2)return;if(doubanAmount>=2){toast('豆板醤は基準量の2倍まで投入済みです');return;}doubanAmount+=.25;seasoningAmounts.douban=doubanAmount;for(let i=0;i<5;i++){let xx=clamp(x+rnd(-.22,.22),-2,2),zz=clamp(z+rnd(-.22,.22),-2,2);meat.push({x:xx,z:zz,y:2.65,vx:0,vz:0,vy:-.5,r:rnd(.045,.085),color:'#dd391b',sauce:true,out:false});}noiseSE('pour',.22);}
+let cutRecords={},scores=[],drag=null,tool='pan',strokes=0,toastUntil=0,pan={x:0,y:0,z:0,tilt:0},knife={x:0,z:0,y:1.5,angle:0},ladle={x:2.5,z:1},bowl={x:-3.5,z:1};
+let meatLoosen=0;
+let cook=0,burn=0,flips=0,mixed=0,lost=0,agitation=0,simmer=0,soup=1,damage=0,gentle=0,starch=0,mix=0,glaze=0,lowFirst=false,starchStep=0,pourCircle=0,pourBad=0,lastMix=0,lastFlip=-1,emulsify=0;
+let topAmounts=Object.fromEntries(topDefs.map(x=>[x[0],0])),chosenTops=new Set(),topCircle=0,orbit=0,lastSfx=0,emitClock=0;
+const titles=['0 / 自由な具材セレクト','1 / 直感！包丁さばき','2 / 醤とひき肉のリアル炒め','3 / スープと豆腐のリアル煮込み','4 / 究極のとろみ付け','5 / 魂の仕上げ','完成 / あなたの一皿'];
+const helps=['1〜2人分：絹ごし豆腐230g、牛ひき肉50g。長ネギは太め8cmを初期選択。ニラは追加アレンジです。しょうが薄切り2枚・にんにく4〜5枚分も選択して、長ネギと同じ自由切りで刻めます。','豆腐は厚み1cmの直線切り。長ネギ・ニラ・しょうが・にんにくは自由にみじん切り。微細な破片は軽量な専用描画で表現し、刻みの細かさも評価します。','サラダ油大さじ1〜2で香味野菜を弱火で炒め、牛ひき肉50gをほぐします。上の「サラダ油」→「香味野菜」→「ひき肉」で手動投入。肉に火が通ったら調味料の選択欄から豆豉醤・しょうゆ・紹興酒などを選んで個別に投入。スープ・砂糖を入れ忘れた場合は煮込み開始時に補います。豆板醤は手動で基準小さじ1を目安に。','鶏ガラスープ160mlと砂糖ひとつまみを加え、絹ごし豆腐と仕込んだ具材を煮ます。中弱火で5〜7秒、優しく混ぜてください。実際の調理時間を短縮したゲーム表現です。','片栗粉小さじ1を倍量の水で溶いたものを基準量として投入。①弱火・消火 ②回し入れて混ぜる ③強火で鍋振りしてツヤを出す。','ごま油・ラー油は各大さじ1弱を目安に。万能ねぎ・花椒はお好みで。追加の香草も自由、仕上げは採点しません。','作った具材を中華皿に盛り付け。360度ゆっくり鑑賞できます。'];
+// Web Audio：五音音階の撥弦＋笛＋打楽器。自作ノイズによる料理SE。
+let audioOn=true,ac=null,master=null,music=null,noiseBuf=null,hiss=null,hissGain=null,musicTimer=null,noteIndex=0;
+function note(freq,start,duration,volume,type='sine',dest=music){if(!ac||!audioOn)return;const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(freq,start);g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),start+.014);g.gain.exponentialRampToValueAtTime(.0001,start+duration);o.connect(g);g.connect(dest||master);o.start(start);o.stop(start+duration+.02);}
+function initAudio(){try{if(!ac){ac=new(window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=audioOn?.65:0;master.connect(ac.destination);music=ac.createGain();music.gain.value=.48;music.connect(master);noiseBuf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);let data=noiseBuf.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;hiss=ac.createBufferSource();hiss.buffer=noiseBuf;hiss.loop=true;let filter=ac.createBiquadFilter();filter.type='bandpass';filter.frequency.value=1900;filter.Q.value=.5;hissGain=ac.createGain();hissGain.gain.value=0;hiss.connect(filter);filter.connect(hissGain);hissGain.connect(master);hiss.start();musicTimer=setInterval(scheduleMusic,100);}if(ac.state!=='running')ac.resume();}catch{toast('音声を開始できません。音なしで操作を続けられます。');}}
+let nextNote=0;
+let bgmStyle='chinese';
+$('bgmSelect').onchange=()=>{
+ bgmStyle=$('bgmSelect').value;noteIndex=0;
+ if(audioOn)initAudio();
+ if(ac&&music){
+  // 再生中の余韻は旧バスでフェードアウト。料理SEはmaster側なので維持。
+  const old=music,now=ac.currentTime;
+  old.gain.cancelScheduledValues(now);old.gain.setValueAtTime(old.gain.value,now);old.gain.linearRampToValueAtTime(0,now+.18);
+  setTimeout(()=>old.disconnect(),450);
+  music=ac.createGain();music.gain.setValueAtTime(0,now);music.gain.linearRampToValueAtTime(.48,now+.22);music.connect(master);
+  nextNote=now+.06;
+ }
+ toast('BGM：'+$('bgmSelect').selectedOptions[0].textContent.replace('BGM：',''));
+};
+// 追加曲も外部音源不要のオリジナル合成。曲ごとにテンポ・和声・音色を変更。
+function softKeys(freq,start,length,volume){
+ if(!ac||!audioOn)return;
+ note(freq,start,length,volume,'sine');note(freq*2,start,length*.48,volume*.22,'sine');note(freq*3,start,length*.25,volume*.065,'sine');
+}
+function musicPercussion(start,kind,volume=.03){
+ if(!ac||!audioOn)return;
+ if(kind==='kick'){
+  const o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(140,start);o.frequency.exponentialRampToValueAtTime(43,start+.14);g.gain.setValueAtTime(volume,start);g.gain.exponentialRampToValueAtTime(.0001,start+.22);o.connect(g);g.connect(music);o.start(start);o.stop(start+.24);return;
+ }
+ const s=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();s.buffer=noiseBuf;
+ f.type=kind==='hat'?'highpass':'bandpass';f.frequency.value=kind==='hat'?6200:1700;f.Q.value=.7;
+ const len=kind==='hat'?.045:.13;g.gain.setValueAtTime(volume,start);g.gain.exponentialRampToValueAtTime(.0001,start+len);s.connect(f);f.connect(g);g.connect(music);s.start(start,0,len);s.stop(start+len+.01);
+}
+function scheduleAlternativeMusic(){
+ const style=bgmStyle;
+ const settings={lofi:{bpm:76,swing:.12},calm:{bpm:64,swing:0},upbeat:{bpm:124,swing:0}}[style];
+ const chords=[[0,3,7,10],[5,8,12,15],[8,12,15,19],[7,10,14,17]];
+ const melody=[12,null,15,19,17,15,10,null,12,15,19,null,22,19,17,15,17,null,20,24,22,20,15,null,19,17,15,14,10,null,7,null];
+ while(nextNote<ac.currentTime+.25){
+  const s=nextNote,i=noteIndex%32,step=i%8,root=style==='calm'?220:style==='lofi'?174.614:196,chord=chords[Math.floor(i/8)],m=melody[i];
+  if(style==='lofi'){
+   if(step===0||step===5)chord.forEach((n,j)=>softKeys(root*2**(n/12),s+j*.012,1.75,.018));
+   if(step===0||step===4)softKeys(root*.5*2**(chord[0]/12),s,.55,.09);
+   if(m!==null&&i%2===0)softKeys(root*2**(m/12),s+.016,.65,.029);
+   if(step===0||step===5)musicPercussion(s,'kick',.10);
+   if(step===2||step===6)musicPercussion(s,'snare',.045);
+   musicPercussion(s,'hat',step%2?.012:.019);
+  }else if(style==='calm'){
+   if(step===0)chord.forEach((n,j)=>softKeys(root*2**(n/12),s+j*.09,3.1,.020));
+   const n=chord[step%4]+(step>=4?12:0);softKeys(root*2**(n/12),s,1.8,.032);
+   if(m!==null&&step%2===0)softKeys(root*2**((m+12)/12),s+.04,1.6,.013);
+   if(step===0)softKeys(root*.5*2**(chord[0]/12),s,2.7,.044);
+  }else{
+   if(step%2===0){musicPercussion(s,'kick',.13);note(root*.5*2**(chord[0]/12),s,.19,.07,'triangle');}
+   if(step===2||step===6)musicPercussion(s,'snare',.064);
+   musicPercussion(s,'hat',step%2?.027:.015);
+   if(step%2===1)chord.forEach(n=>softKeys(root*2**(n/12),s,.18,.025));
+   if(m!==null){note(root*2**(m/12),s,.20,.036,'triangle');softKeys(root*2**((m+12)/12),s,.16,.012);}
+  }
+  noteIndex++;nextNote+=60/settings.bpm/2*(1+(step%2?-settings.swing:settings.swing));
+ }
+}
+// 宮調の五音音階によるオリジナル曲。古筝・琵琶風の撥弦、笛、低い太鼓と小さな銅鑼。
+function chinesePluck(freq,start,length,volume){
+ if(!ac||!audioOn)return;
+ // 弦の微小な非整数倍音と高域から先に減衰する包絡、胴の共鳴を合成。
+ const body=ac.createBiquadFilter(),out=ac.createGain();body.type='peaking';body.frequency.value=680;body.Q.value=.85;body.gain.value=3;out.gain.value=.82;body.connect(out);out.connect(music);
+ const tail=length*1.55;
+ for(let k=1;k<=7;k++){
+  const o=ac.createOscillator(),g=ac.createGain(),f=freq*k*Math.sqrt(1+.00024*k*k);
+  o.type='sine';o.frequency.setValueAtTime(f*1.003,start);o.frequency.exponentialRampToValueAtTime(f,start+.045);
+  const decay=Math.max(.09,tail/(1+.42*(k-1))),amp=volume*(k===1?1:.52/k);
+  g.gain.setValueAtTime(.00001,start);g.gain.exponentialRampToValueAtTime(Math.max(.00002,amp),start+.003);g.gain.exponentialRampToValueAtTime(.00001,start+decay);
+  o.connect(g);g.connect(body);o.start(start);o.stop(start+decay+.025);
+ }
+ const attack=ac.createBufferSource(),filter=ac.createBiquadFilter(),env=ac.createGain();attack.buffer=noiseBuf;filter.type='bandpass';filter.frequency.value=Math.min(6500,freq*5);filter.Q.value=.7;env.gain.setValueAtTime(volume*.32,start);env.gain.exponentialRampToValueAtTime(.00001,start+.035);attack.connect(filter);filter.connect(env);env.connect(body);attack.start(start,0,.045);
+ setTimeout(()=>{body.disconnect();out.disconnect();},Math.max(0,(start+tail+.2-ac.currentTime)*1000));
+}
+function chineseFlute(freq,start,length){
+ if(!ac||!audioOn)return;
+ // 息の立ち上がり・管の倍音・笛膜の明るさと遅れて始まるビブラート。
+ const env=ac.createGain(),filter=ac.createBiquadFilter(),v=ac.createOscillator(),vg=ac.createGain();
+ filter.type='lowpass';filter.frequency.value=Math.min(8500,freq*8);filter.Q.value=.65;
+ env.gain.setValueAtTime(.00001,start);env.gain.linearRampToValueAtTime(.027,start+.055);env.gain.setTargetAtTime(.022,start+.12,.08);env.gain.exponentialRampToValueAtTime(.00001,start+length);
+ filter.connect(env);env.connect(music);v.frequency.value=5.6;vg.gain.setValueAtTime(0,start);vg.gain.linearRampToValueAtTime(freq*.003,start+Math.min(.23,length*.6));v.connect(vg);
+ for(const [harm,amp] of [[1,1],[2,.3],[3,.17],[4,.07]]){
+  const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(freq*harm*.989,start);o.frequency.exponentialRampToValueAtTime(freq*harm,start+.06);vg.connect(o.frequency);g.gain.value=amp;o.connect(g);g.connect(filter);o.start(start);o.stop(start+length+.025);
+ }
+ const breath=ac.createBufferSource(),bp=ac.createBiquadFilter(),bg=ac.createGain();breath.buffer=noiseBuf;breath.loop=true;bp.type='bandpass';bp.frequency.value=2600;bp.Q.value=.65;bg.gain.value=.14;breath.connect(bp);bp.connect(bg);bg.connect(filter);breath.start(start);breath.stop(start+length+.025);v.start(start);v.stop(start+length+.025);
+ setTimeout(()=>{filter.disconnect();env.disconnect();vg.disconnect();},Math.max(0,(start+length+.15-ac.currentTime)*1000));
+}
+function chineseDrum(start,accent=false){
+ if(!ac||!audioOn)return;
+ const o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(accent?125:170,start);o.frequency.exponentialRampToValueAtTime(48,start+.18);
+ g.gain.setValueAtTime(accent?.085:.038,start);g.gain.exponentialRampToValueAtTime(.0001,start+.25);o.connect(g);g.connect(music);o.start(start);o.stop(start+.28);
+}
+function chineseGong(start){
+ if(!ac||!audioOn)return;
+ for(const [r,a] of [[1,.025],[1.48,.012],[2.13,.009],[2.91,.005]])note(196*r,start,2.1,a,'sine');
+}
+function scheduleMusic(){
+ if(!ac||ac.state!=='running')return;
+ if(nextNote<ac.currentTime)nextNote=ac.currentTime+.05;
+ if(!audioOn)return;
+ if(bgmStyle!=='chinese'){scheduleAlternativeMusic();return;}
+ const melody=[0,2,4,7,9,7,4,null,2,4,7,9,12,9,7,null,9,12,14,12,9,7,4,2,4,7,9,7,4,2,0,null,7,9,12,14,16,14,12,9,7,4,7,9,12,9,7,null,4,7,9,7,4,2,4,7,2,4,2,0,-3,0,0,null];
+ const bass=[0,-5,-3,-5];
+ while(nextNote<ac.currentTime+.25){
+  const s=nextNote,i=noteIndex%melody.length,m=melody[i],beat=noteIndex%8;
+  if(m!==null){const f=293.665*2**(m/12);chinesePluck(f,s,1.15,.043);if(i%4===0)chineseFlute(f,s+.025,1.02);if(i%8===6){chinesePluck(f*2**(-2/12),s+.13,.18,.012);chinesePluck(f,s+.20,.5,.018);}}
+  if(beat%2===0){const base=146.832*2**(bass[Math.floor(i/16)]/12);chinesePluck(base,s,.75,.06);chineseDrum(s,beat===0||beat===4);}
+  if(m!==null&&beat%2===1){const root=293.665*2**(m/12);chinesePluck(root*2,s+.10,.55,.012);}
+  if(beat===7)noiseSE('tick',.008,s+.17);
+  if(i===32)chineseGong(s);
+  if(beat===2||beat===6)noiseSE('tick',.011,s);
+  if(i===0)chineseGong(s);
+  if(beat===1||beat===5)chinesePluck(293.665*2**((beat===1?7:12)/12),s+.035,.38,.012);
+  noteIndex++;nextNote+=beat%2===0?.325:.3;
+ }
+}
+function noiseSE(type='cut',strength=1,when=null){if(!ac||!audioOn)return;const now=when??ac.currentTime;const source=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();source.buffer=noiseBuf;f.type=type==='pour'?'lowpass':'bandpass';f.frequency.value=type==='cut'?850:type==='grind'?2400:type==='tick'?3800:600;f.Q.value=type==='cut'?1.1:.7;const duration=type==='pour'?.25:type==='grind'?.12:type==='tick'?.035:.07;g.gain.setValueAtTime(Math.max(.0001,(type==='tick'?.5:.15)*strength),now);g.gain.exponentialRampToValueAtTime(.0001,now+duration);source.connect(f);f.connect(g);g.connect(master);source.start(now);source.stop(now+duration);if(type==='cut')note(135,now,.055,.1*strength,'triangle',master);if(type==='pan')note(250,now,.15,.06*strength,'sine',master);}
+$('sound').onclick=()=>{audioOn=!audioOn;initAudio();if(master)master.gain.setTargetAtTime(audioOn?.65:0,ac.currentTime,.06);$('sound').textContent=audioOn?'音 ON':'音 OFF';};
+// スタート画面なしで即操作可能。音声のみブラウザの制限に従い初回操作時に開始。
+window.addEventListener('pointerdown',()=>{if(audioOn)initAudio();},{once:true,capture:true});
+window.addEventListener('keydown',()=>{if(audioOn)initAudio();},{once:true,capture:true});
+// 自家製のカメラと水平面レイ交差。切断・中華鍋の調理は俯瞰、完成時は周回。
+let eye,forward,right,up,focal;
+let renderLayer=0,worldOffset={x:0,y:0,z:0},modelRotation=0;
+// 丸底の中華鍋。内面の描画と食材の接触判定で同じ曲面を使う。
+function wokHeight(r){return .49+1.21*(Math.max(0,r)/2.86)**2;}
+// 丸底の斜面に沿って中心へ戻す。空中・鍋外には作用させない。
+function settleToWokCenter(p,x,z,floor,dt){
+ if(p.out||p.y>floor+.12)return;
+ const r=Math.hypot(x,z);if(r<.08)return;
+ const gravity=7.5, slope=2*1.21*r/(2.86*2.86);
+ const acceleration=gravity*slope/Math.sqrt(1+slope*slope);
+ p.vx-=x/r*acceleration*dt;p.vz-=z/r*acceleration*dt;
+}
+let lastTofuBreak=-10;
+// 中心だけでなく全頂点を鍋内へ収め、内壁・スープ面より上に支持する。
+function containFood(p){
+ const limit=2.22,c=center(p.poly);let reach=0;
+ for(const v of p.poly)reach=Math.max(reach,Math.hypot(v.x-c.x,v.z-c.z));
+ if(reach>limit*.88){const scale=limit*.88/reach;p.poly=p.poly.map(v=>({x:c.x+(v.x-c.x)*scale,z:c.z+(v.z-c.z)*scale}));}
+ const cc=center(p.poly);let radius=0;for(const v of p.poly)radius=Math.max(radius,Math.hypot(v.x-cc.x,v.z-cc.z));
+ const distance=Math.hypot(cc.x,cc.z),allowed=Math.max(0,limit-radius);
+ if(distance>allowed&&distance>0)movePiece(p,cc.x*(allowed/distance-1),cc.z*(allowed/distance-1));
+ let support=1.115;for(const v of p.poly)support=Math.max(support,wokHeight(Math.hypot(v.x,v.z))+.035);
+ if(p.y<support){p.y=support;p.vy=0;}
+}
+const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=a=>{let n=Math.hypot(...a);return a.map(v=>v/n);};
+function camera(){let mobile=W<650;if(stage===6){eye=[Math.sin(orbit)*10,8.5,Math.cos(orbit)*10];}else if(stage===1){eye=[0,mobile?15:13,.65];}else if(stage>=2&&stage<=5){eye=[0,mobile?16:14,3.6];}else eye=[0,9.2,mobile?12.8:11.5];let target=[0,stage===1?.25:1,0];forward=norm(sub(target,eye));right=norm(cross(forward,[0,1,0]));up=cross(right,forward);focal=Math.min(W*.95,H*1.15);if(mobile)focal=W*1.18;}
+function project(x,y,z){if(modelRotation){const xx=x;x=-z;z=xx;}const vx=x+worldOffset.x-eye[0],vy=y+worldOffset.y-eye[1],vz=z+worldOffset.z-eye[2],depth=Math.max(.05,vx*forward[0]+vy*forward[1]+vz*forward[2]),scale=focal/depth;return [W*.5+(vx*right[0]+vy*right[1]+vz*right[2])*scale,H*.57-(vx*up[0]+vy*up[1]+vz*up[2])*scale,depth];}
+function ground(e,y=.3){let rect=canvas.getBoundingClientRect(),sx=(e.clientX-rect.left-W*.5)/focal,sy=-(e.clientY-rect.top-H*.57)/focal;let ray=forward.map((v,i)=>v+right[i]*sx+up[i]*sy),k=(y-eye[1])/ray[1];return {x:eye[0]+ray[0]*k,z:eye[2]+ray[2]*k};}
+let renderList=[];
+function poly3(vertices,color,stroke=null){let pp=vertices.map(v=>project(...v));renderList.push({layer:renderLayer,d:pp.reduce((s,p)=>s+p[2],0)/pp.length,run(){ctx.beginPath();pp.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fillStyle=color;ctx.fill();/* 隣接面のアンチエイリアスによる背景色の筋を同色のサブピクセル被覆で塞ぐ。 */ctx.save();ctx.strokeStyle=stroke||color;ctx.lineWidth=stroke?.6:.75;ctx.lineJoin='round';ctx.stroke();ctx.restore();}});}
+function shade(color,k){let channels;if(color.startsWith('#')){let hex=color.slice(1);if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');let n=parseInt(hex,16);channels=[n>>16,(n>>8)&255,n&255];}else{channels=(color.match(/[\d.]+/g)||['180','140','100']).slice(0,3).map(Number);}return `rgb(${channels.map(v=>Math.round(clamp(v*k,0,255))).join(',')})`;}
+function extrude(points,y,h,color){poly3(points.map(p=>[p.x,y+h,p.z]),color);for(let i=0;i<points.length;i++){let a=points[i],b=points[(i+1)%points.length];poly3([[a.x,y,a.z],[b.x,y,b.z],[b.x,y+h,b.z],[a.x,y+h,a.z]],shade(color,.58+(i%3)*.1));}}
+function rect(x,z,w,d){return [{x:x-w/2,z:z-d/2},{x:x+w/2,z:z-d/2},{x:x+w/2,z:z+d/2},{x:x-w/2,z:z+d/2}];}
+function disk(x,y,z,r,color,n=48){/* 扇形の三角形分割をやめ、円全体を一度だけ塗り放射状の継ぎ目をなくす。 */const vertices=[];for(let i=0;i<n;i++){const a=i/n*TAU;vertices.push([x+Math.cos(a)*r,y,z+Math.sin(a)*r]);}poly3(vertices,color);}
+function ball(x,y,z,r,color,flat=1){let p=project(x,y,z),sz=r*focal/p[2];renderList.push({layer:renderLayer,d:p[2],run(){let g=ctx.createRadialGradient(p[0]-sz*.3,p[1]-sz*.4,sz*.06,p[0],p[1],Math.max(.1,sz));g.addColorStop(0,shade(color,1.35));g.addColorStop(1,shade(color,.62));ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(p[0],p[1],Math.max(.15,sz),Math.max(.15,sz*flat),0,0,TAU);ctx.fill();}});}
+function line3(a,b,color,width){let pa=project(...a),pb=project(...b);renderList.push({layer:renderLayer,d:(pa[2]+pb[2])/2,run(){ctx.strokeStyle=color;ctx.lineWidth=width*focal/pa[2];ctx.lineCap='round';ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke();}});}
+function label(x,y,z,text,color='#ffe3ad'){let p=project(x,y,z);renderList.push({layer:8,d:-100,run(){ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(text,p[0],p[1]);}});}
+// 食材固有の形・皮・断面を手続き生成。外部画像や外部モデルは使用しない。
+// 刻み薬味は面ごとのソート・グラデーションを避け、各食材を1バッチで描く。
+function drawHerbBatch(list,board=false,offset=0){
+ if(!list.length)return;
+ const marks=[];
+ for(const p of list){
+  const c=center(p.poly),b=bounds(p.poly),y=board?p.y:(stage>=5?platedSurface(c.x,c.z)-p.h*.5:p.y)+offset;
+  const q=project(c.x,y+p.h*.65,c.z),s=focal/q[2];
+  // 実際に切断された輪郭を投影し、矩形への置き換えをしない。
+  const outline=p.poly.map(v=>project(v.x,y+p.h*.65,v.z));
+  marks.push({x:q[0],y:q[1],w:Math.max(1,b.w*s),h:Math.max(1,b.d*s),type:p.type,outline});
+ }
+ renderList.push({layer:renderLayer,d:project(0,1,0)[2],run(){
+  ctx.save();
+  for(const type of ['negi','nira','ginger','garlic']){
+   ctx.fillStyle={negi:'#c9de98',nira:'#377e41',ginger:'#ddbd70',garlic:'#eee2ba'}[type];ctx.beginPath();
+   for(const m of marks)if(m.type===type){ctx.moveTo(m.outline[0][0],m.outline[0][1]);for(let i=1;i<m.outline.length;i++)ctx.lineTo(m.outline[i][0],m.outline[i][1]);ctx.closePath();}
+   ctx.fill();ctx.strokeStyle={negi:'#6b9c48',nira:'#8ab766',ginger:'#ae8b43',garlic:'#c1ac7d'}[type];ctx.lineWidth=.8;ctx.beginPath();
+   for(const m of marks)if(m.type===type){
+    if(type==='negi'&&m.w>3&&m.h>2){ctx.moveTo(m.x+m.w*.25,m.y);ctx.ellipse(m.x,m.y,m.w*.25,m.h*.28,0,0,TAU);}
+    else{ctx.moveTo(m.x-m.w*.3,m.y);ctx.lineTo(m.x+m.w*.3,m.y);}
+   }
+   ctx.stroke();
+  }
+  ctx.restore();
+ }});
+}
+function foodModel(p,y=p.y,detail=true){
+ if(!p.horizontal){foodModelLocal(p,y,detail);return;}
+ // 横置きでも茎・傘・葉脈の長軸を保ち、切断片も同じ向きで描く。
+ const local={...p,poly:p.poly.map(v=>({x:v.z,z:-v.x}))};
+ modelRotation=1;try{foodModelLocal(local,y,detail);}finally{modelRotation=0;}
+}
+function foodModelLocal(p,y=p.y,detail=true){
+ const c=center(p.poly),bb=bounds(p.poly),A=area(p.poly),h=p.h,type=p.type;
+ // 小さな破片は断面模様を省略。切断形状と物理状態はそのまま保持する。
+ // 長ネギ・ニラの断面と葉脈は、断片数や面積で無地表示に切り替えない。
+ if(!isHerb(type)&&(!detail || (A<.045 && type!=='tofu'))){
+  const colors={tofu:'#f4edd9',negi:'#bfd987',nira:'#47964e',eggplant:'#b4a077',cheese:'#ffd36c',sprout:'#ede3c3',shimeji:'#b99a76'};
+  const color=colors[type]||p.color;
+  if(A<.018)poly3(p.poly.map(v=>[v.x,y+h,v.z]),color);
+  else extrude(p.poly,y,h,color);
+  return;
+ }
+ const minX=Math.min(...p.poly.map(v=>v.x)),maxX=Math.max(...p.poly.map(v=>v.x)),minZ=Math.min(...p.poly.map(v=>v.z)),maxZ=Math.max(...p.poly.map(v=>v.z));
+ if(type==='ginger'||type==='garlic'){
+  extrude(p.poly,y,h,type==='ginger'?'#d6b36a':'#eee1b9');
+  poly3(p.poly.map(v=>[c.x+(v.x-c.x)*.9,y+h+.005,c.z+(v.z-c.z)*.9]),type==='ginger'?'#f0d99a':'#fff1d3');
+  for(let j=1;j<=3;j++){const x=minX+bb.w*j/4;line3([x,y+h+.008,minZ+bb.d*.2],[x,y+h+.008,maxZ-bb.d*.2],type==='ginger'?'#c5a35e':'#ddcda6',.009);}
+  return;
+ }
+ function inside(x,z){let sign=0;for(let i=0;i<p.poly.length;i++){let a=p.poly[i],b=p.poly[(i+1)%p.poly.length],v=(b.x-a.x)*(z-a.z)-(b.z-a.z)*(x-a.x);if(Math.abs(v)<1e-7)continue;let s=Math.sign(v);if(sign&&sign!==s)return false;sign=s;}return true;}
+ function patch(color){poly3(p.poly.map(v=>[c.x+(v.x-c.x)*.88,y+h+.003,c.z+(v.z-c.z)*.88]),color);}
+ function dots(color,count,r){for(let i=0;i<count;i++){let u=((i*0.61803398875+.21)%1),v=((i*.41421356237+.37)%1),x=minX+bb.w*u,z=minZ+bb.d*v;if(inside(x,z))disk(x,y+h+.008,z,r,color,7);}}
+ if(type==='tofu'){
+  extrude(p.poly,y,h,'#f4edd9');patch('#fff9e9');
+  if(detail&&A>.03){dots('#dfd8bf',Math.min(18,Math.ceil(A*9)),Math.min(.014,Math.sqrt(A)*.025));if(A>.5)for(let j=1;j<9;j++){const u=j/9,x=minX+bb.w*u,z=minZ+bb.d*u;line3([x,y+h+.004,c.z-bb.d*.3],[x,y+h+.004,c.z+bb.d*.3],'#e8e1cc',.008);line3([c.x-bb.w*.3,y+h+.005,z],[c.x+bb.w*.3,y+h+.005,z],'#e8e1cc',.008);}}
+  return;
+ }
+ if(type==='eggplant'){
+  if(p.poly.length===28&&p.stroke===-1){
+   extrude(p.poly,y,h,'#493052');
+   for(let j=0;j<8;j++){let u=j/8*TAU,v=(j+1)/8*TAU;poly3([[c.x,y+h+.25,c.z],[c.x+Math.cos(u)*bb.w*.42,y+h,c.z+Math.sin(u)*bb.d*.44],[c.x+Math.cos(v)*bb.w*.42,y+h,c.z+Math.sin(v)*bb.d*.44]],j<4?'#61406f':'#39233e');}
+   let zz=minZ+bb.d*.09;disk(c.x,y+h+.04,zz,Math.min(.24,bb.w*.2),'#618044',12);line3([c.x,y+h+.05,zz],[c.x+.06,y+h+.17,zz-.3],'#668347',.12);line3([c.x-bb.w*.2,y+h+.05,c.z-bb.d*.22],[c.x-bb.w*.24,y+h+.06,c.z+bb.d*.16],'#917299',.035);return;
+  }
+  extrude(p.poly,y,h,'#45304e');patch('#eee3b8');
+  if(detail&&A>.06){dots('#b59a66',Math.min(15,Math.ceil(A*8)),Math.min(.026,Math.sqrt(A)*.035));}
+  // 皮付きの縁とクリーム色の切断面。
+  if(A>3){let z=minZ+.17;disk(c.x,y+h+.012,z,.2,'#568048',10);for(let j=0;j<5;j++){let a=j*TAU/5;line3([c.x,y+h+.02,z],[c.x+Math.cos(a)*.36,y+h+.025,z+Math.sin(a)*.27],'#5f8548',.08);}}
+  return;
+ }
+ if(type==='cheese'){
+  extrude(p.poly,y,h,'#eab74b');patch('#ffda77');
+  if(detail&&A>.04)dots('#d9a441',Math.min(9,Math.ceil(A*4)),Math.min(.07,Math.sqrt(A)*.065));return;
+ }
+ if(type==='negi'){
+  let stem=bb.d>bb.w*1.8;
+  if(stem){extrude(p.poly,y,h,'#d6e6b1');let x=c.x;line3([x,y+h+.015,minZ+.03],[x,y+h+.015,maxZ-.03],'#89b55b',Math.min(bb.w*.34,.055));line3([minX+bb.w*.2,y+h+.02,minZ],[minX+bb.w*.2,y+h+.02,maxZ],'#f3f2d9',Math.min(.022,bb.w*.12));}
+  else{extrude(p.poly,y,h,'#91b65b');patch('#e5e9bd');let r=Math.min(bb.w,bb.d)*.32;if(r>0){disk(c.x,y+h+.012,c.z,r,'#5e9847',10);disk(c.x,y+h+.014,c.z,r*.72,'#e2e9b8',10);disk(c.x,y+h+.016,c.z,r*.38,'#8ab05a',8);}}return;
+ }
+ if(type==='nira'){
+  extrude(p.poly,y,Math.max(.025,h*.52),'#367840');let top=y+Math.max(.025,h*.52)+.006;
+  line3([c.x,top,minZ+.012],[c.x,top,maxZ-.012],'#83b65e',Math.min(.025,bb.w*.17));return;
+ }
+ if(type==='sprout'){
+  let len=bb.d,r=Math.min(.047,bb.w*.45);if(len>.24){let prev=[c.x,y+r,minZ];for(let i=1;i<=9;i++){let u=i/9,next=[c.x+Math.sin(u*Math.PI*1.4)*Math.min(.11,bb.w*.5),y+r+Math.sin(u*Math.PI)*.045,minZ+len*u];line3(prev,next,'#f2ead0',r*1.8);prev=next;}ball(c.x,y+.055,maxZ,.065,'#d8cb83',.8);line3([c.x,y+.035,minZ],[c.x+.035,y+.025,minZ-.08],'#bea983',.022);}else extrude(p.poly,y,.065,'#ede3c3');return;
+ }
+ if(type==='shimeji'){
+  if(bb.d>.7){let x=c.x,z=c.z;line3([x+.04,y,minZ+.18],[x,y+.32,maxZ-.23],'#e9dbc2',Math.min(.19,bb.w*.65));ball(x,y+.38,maxZ-.23,Math.min(.24,bb.w*.85),'#937052',.57);ball(x-.035,y+.405,maxZ-.26,Math.min(.14,bb.w*.48),'#b79672',.38);}
+  else{extrude(p.poly,y,Math.min(h,.16),'#e6d5b7');if(A>.02)patch('#aa8563');}return;
+ }
+ extrude(p.poly,y,h,p.color);
+}
+// 平行移動で変わらない面積・寸法をキャッシュし、配列生成と再計算を削減。
+function area(poly){if(poly._area!==undefined)return poly._area;let s=0;for(let i=0;i<poly.length;i++){let a=poly[i],b=poly[(i+1)%poly.length];s+=a.x*b.z-b.x*a.z;}return poly._area=Math.abs(s)/2;}
+function center(poly){if(poly._center)return poly._center;let x=0,z=0;for(const p of poly){x+=p.x;z+=p.z;}return poly._center={x:x/poly.length,z:z/poly.length};}
+function bounds(poly){if(poly._bounds)return poly._bounds;let x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity;for(const p of poly){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);z0=Math.min(z0,p.z);z1=Math.max(z1,p.z);}return poly._bounds={w:x1-x0,d:z1-z0};}
+function piece(poly,h,type,color){return {poly,h,type,color,y:.29,vx:0,vz:0,vy:0,tilt:0,spin:0,stroke:-1};}
+function prepare(){queue=['tofu',...selected];pieces=[];for(const id of queue){cutRecords[id]={strokes:[],hits:0};let def=ingredients.find(x=>x[0]===id),color=def?.[2]||'#fff0d1',amount=id==='tofu'?1:portions[id];for(let portion=0;portion<amount;portion++){let columns=Math.min(amount,3),rows=Math.ceil(amount/columns),ox=(portion%columns-(columns-1)/2)*2.35,oz=(Math.floor(portion/columns)-(rows-1)/2)*Math.min(1.35,3.4/Math.max(1,rows-1));if(id==='tofu'||id==='cheese')pieces.push(piece(rect(ox,oz,amount>1?1.9:2.8,amount>1?1.8:id==='tofu'?2.8:2.5),id==='tofu'?tofuHeightCm*TOFU_SCALE:.62,id,color));else if(id==='eggplant')pieces.push(piece(ellipsePoly(ox,oz,.82,amount>1?1.45:2.05),.68,id,color));else if(id==='ginger'||id==='garlic'){const count=id==='ginger'?2:5;for(let j=0;j<count;j++)pieces.push(piece(ellipsePoly(ox+(j-(count-1)/2)*.48,oz,.32,id==='ginger'?.63:.43,12),.10,id,color));}else{let count=id==='sprout'?13:6;for(let i=0;i<count;i++)pieces.push(piece(rect(ox+(i-(count-1)/2)*(id==='sprout'?.12:.22),oz,id==='sprout'?.09:id==='shimeji'?.3:.16,id==='shimeji'?1.5:['negi','nira'].includes(id)?(amount>1?4.4:5.1):3.5),id==='shimeji'?.28:.15,id,color));}}}
+// まな板全体の中心で90度回し、長い食材を左から右へ横置き。
+for(const p of pieces){p.poly=p.poly.map(v=>({x:-v.z,z:v.x}));p.horizontal=true;}
+prep=0;tofuLayerCut=false;}
+function current(){return queue[prep]||'tofu';}
+function toast(s){$('toast').textContent=s;$('toast').style.opacity=1;toastUntil=t+2.7;}
+function addButton(label,fn,active=false){let b=document.createElement('button');b.textContent=label;b.classList.toggle('active',active);b.onclick=fn;$('buttons').append(b);}
+function ui(){ $('title').textContent=titles[stage];$('help').textContent=helps[stage];$('step').textContent=stage<6?`${stage}/5`:'';$('buttons').replaceChildren();$('heatrow').style.display=stage>=2&&stage<=4?'flex':'none';$('next').textContent=['仕込み開始 →','炒める →','煮込む →','とろみ付け →','仕上げ →','盛り付ける →'][stage]||'';
+if(stage===0){addTofuHeightControl();ingredients.forEach(([id,name])=>{addButton(name+' ×'+portions[id]+' ＋',()=>changePortion(id,1),selected.has(id));if(portions[id])addButton(name+' −',()=>changePortion(id,-1));});}
+if(stage===1){queue.forEach((id,i)=>addButton(names[id],()=>{release();prep=i;ui();},i===prep));if(current()==='tofu'){addButton('包丁：縦 ↕',()=>{release();knifeDirection='vertical';knife.angle=Math.PI/2;ui();},knifeDirection==='vertical');addButton('包丁：横 ↔',()=>{release();knifeDirection='horizontal';knife.angle=0;ui();},knifeDirection==='horizontal');addTofuHeightControl();}else{const hint=document.createElement('span');hint.style.cssText='padding:8px;font-size:12px;color:#ffe3ad';hint.textContent='自由切り：包丁がマウス・指の軌跡に追従します';$('buttons').append(hint);}}
+if(stage===2){
+ const group=(title)=>{const row=document.createElement('div');row.className='stir-group';const caption=document.createElement('strong');caption.textContent=title;row.append(caption);$('buttons').append(row);return row;};
+ const button=(row,text,fn,active=false,disabled=false)=>{const b=document.createElement('button');b.textContent=text;b.onclick=fn;b.classList.toggle('active',active);b.disabled=disabled;row.append(b);};
+ const oilRow=group('サラダ油');button(oilRow,saladOilAdded?'✓ 投入済み':'＋ 大さじ1〜2',()=>addStirIngredient('oil'),saladOilAdded,saladOilAdded);
+ const foodRow=group('食材');
+ button(foodRow,(beefAdded?'✓ ':'＋ ')+'ひき肉 50g',()=>addStirIngredient('beef'),beefAdded,beefAdded);
+ const herbs=[...selected].map(id=>names[id]+'×'+portions[id]).join('・');
+ button(foodRow,(cutIngredientsAdded?'✓ ':'＋ ')+'香味野菜（'+(herbs||'選択なし')+'）',()=>addStirIngredient('cut'),cutIngredientsAdded,cutIngredientsAdded);
+ const seasonRow=group('調味料（選択式）');
+ const select=document.createElement('select');select.setAttribute('aria-label','投入する調味料');
+ seasoningDefs.forEach(([id,name,amount])=>{const option=document.createElement('option');option.value=id;option.textContent=(seasoningAmounts[id]>0?'✓ ':'')+name+' ／ '+amount;select.append(option);});
+ select.value=selectedSeasoning;select.onchange=()=>{selectedSeasoning=select.value;ui();};seasonRow.append(select);
+ button(seasonRow,selectedSeasoning==='douban'?'＋ 小さじ¼ずつ投入':'選択した調味料を投入',addSelectedSeasoning,false,selectedSeasoning!=='douban'&&seasoningAmounts[selectedSeasoning]>=1);
+ const toolsRow=group('操作');button(toolsRow,'取っ手：鍋振り',()=>{tool='pan';ui();},tool==='pan');button(toolsRow,'おたま：円で混ぜる',()=>{tool='ladle';ui();},tool==='ladle');
+ button(toolsRow,'豆板醤の器',()=>{selectedSeasoning='douban';tool='douban';ui();},tool==='douban');
+}
+if(stage===4)[['bowl','片栗粉の器'],['ladle','おたま'],['pan','鍋振り']].forEach(([id,name])=>addButton(name,()=>{tool=id;ui();},tool===id));
+if(stage===5)topDefs.forEach(([id,name])=>addButton((chosenTops.has(id)?'✓ ':'')+name,()=>{tool=id;chosenTops.add(id);ui();},tool===id));
+if(stage===5||stage===6)plateButtons();
+$('bottom').style.display=stage===6?'none':'flex';$('result').style.display=stage===6?'block':'none';}
+function setHeat(){heat=+$('heat').value/100;$('heattext').textContent=(heat===0?'消火':heat<.3?'弱火':heat<.75?'中火':'強火')+' '+Math.round(heat*100)+'%';if(stage===4&&heat<.3&&starch<.015){lowFirst=true;starchStep=Math.max(1,starchStep);}}
+const originalSetHeat=setHeat;
+setHeat=function(){originalSetHeat();$('dialneedle').style.transform=`rotate(${-135+heat*270}deg)`;$('heatdial').setAttribute('aria-valuenow',String(Math.round(heat*100)));$('heatdial').setAttribute('aria-valuetext',$('heattext').textContent);};
+$('heat').oninput=setHeat;$('off').onclick=()=>{$('heat').value=0;setHeat();};
+let dialDrag=null;
+const dial=$('heatdial');
+dial.addEventListener('pointerdown',e=>{e.preventDefault();initAudio();const r=dial.getBoundingClientRect();dialDrag={id:e.pointerId,x:e.clientX,y:e.clientY,cx:r.left+r.width/2,cy:r.top+r.height/2,value:heat*100};dial.setPointerCapture(e.pointerId);});
+dial.addEventListener('pointermove',e=>{if(!dialDrag||e.pointerId!==dialDrag.id)return;e.preventDefault();const dx=e.clientX-dialDrag.cx,dy=e.clientY-dialDrag.cy,travel=Math.hypot(e.clientX-dialDrag.x,e.clientY-dialDrag.y);if(travel<3)return;let value;if(Math.hypot(dialDrag.x-dialDrag.cx,dialDrag.y-dialDrag.cy)<15){value=dialDrag.value+(dialDrag.y-e.clientY)*.7;}else{let angle=Math.atan2(dx,-dy)*180/Math.PI;value=(clamp(angle,-135,135)+135)/270*100;}$('heat').value=Math.round(clamp(value,0,100));setHeat();});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])dial.addEventListener(event,()=>{dialDrag=null;});
+dial.addEventListener('keydown',e=>{let v=heat*100;if(['ArrowUp','ArrowRight'].includes(e.key))v+=5;else if(['ArrowDown','ArrowLeft'].includes(e.key))v-=5;else if(e.key==='Home')v=0;else if(e.key==='End')v=100;else return;e.preventDefault();$('heat').value=clamp(v,0,100);setHeat();});
+setHeat();
+// 直線と凸ポリゴンの正確な切断。斜め切りも箱分割に置き換えない。
+function side(p,a,b){return (b.x-a.x)*(p.z-a.z)-(b.z-a.z)*(p.x-a.x);}
+function clip(poly,a,b,sign){let out=[];for(let i=0;i<poly.length;i++){let p=poly[i],q=poly[(i+1)%poly.length],s=side(p,a,b)*sign,v=side(q,a,b)*sign;if(s>=-1e-8)out.push({...p});if((s>0&&v<0)||(s<0&&v>0)){let u=s/(s-v);out.push({x:p.x+(q.x-p.x)*u,z:p.z+(q.z-p.z)*u});}}return out;}
+function cut(a,b){let dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz);if(len<.0005)return;
+const herb=isHerb(current()),rec=cutRecords[current()];
+const crowded=herb&&pieces.filter(p=>p.type===current()).length>=HERB_LIMIT;
+if(crowded){
+ const x0=Math.min(a.x,b.x)-.08,x1=Math.max(a.x,b.x)+.08,z0=Math.min(a.z,b.z)-.08,z1=Math.max(a.z,b.z)+.08;
+ let count=0;
+ for(const p of pieces){if(p.type!==current())continue;const c=center(p.poly);if(c.x<x0||c.x>x1||c.z<z0||c.z>z1)continue;
+ if(Math.abs(side(c,a,b))/len>.12)continue;
+ p.vx+=rnd(-.12,.12);p.vz+=rnd(-.12,.12);p.vy=Math.max(p.vy,.15);count++;
+ }
+ if(count){drag.hits++;rec.hits++;rec.micro=(rec.micro||0)+len;if(t-lastSfx>.07){noiseSE('cut',.5);lastSfx=t;}}
+ return;
+}
+let n={x:-dz/len,z:dx/len},hits=0,newPieces=[];for(let i=pieces.length-1;i>=0;i--){let p=pieces[i];if(p.type!==current()||p.stroke===drag.serial)continue;let along=p.poly.map(q=>((q.x-a.x)*dx+(q.z-a.z)*dz)/(len*len));if(Math.max(...along)<0||Math.min(...along)>1)continue;
+// 交差しない断片を、ポリゴン生成前に除外する。
+let smin=Infinity,smax=-Infinity;for(const v of p.poly){const s=side(v,a,b);smin=Math.min(smin,s);smax=Math.max(smax,s);}if(smin>=-1e-8||smax<=1e-8)continue;let left=clip(p.poly,a,b,1),right=clip(p.poly,a,b,-1);if(left.length<3||right.length<3||Math.min(area(left),area(right))<(herb?.00008:.00018))continue;
+// サイズ下限に達していない交差断片は常に切断可能。
+pieces.splice(i,1);for(const [poly,s]of [[left,1],[right,-1]]){let q=piece(poly,p.h,p.type,p.color),mass=area(poly)*p.h,force=clamp(drag.speed/5,.3,1.8)*clamp(.16/Math.sqrt(mass),.45,2.2);q.horizontal=p.horizontal;q.y=p.y+.015;q.vx=p.vx*.5+n.x*s*(.35+force);q.vz=p.vz*.5+n.z*s*(.35+force);q.vy=.4+force*.6;q.spin=rnd(-2,2);q.stroke=drag.serial;newPieces.push(q);}hits++;}pieces.push(...newPieces);if(hits){drag.hits+=hits;cutRecords[current()].hits+=hits;if(t-lastSfx>.04){noiseSE('cut',.7);lastSfx=t;}}}
+// AABB接触で近似した簡易物理。切断ポリゴンの頂点そのものを移動する。
+function movePiece(p,x,z){if(!x&&!z)return;for(const v of p.poly){v.x+=x;v.z+=z;}if(p.poly._center){p.poly._center.x+=x;p.poly._center.z+=z;}}
+function physics(dt){let active=pieces.filter(p=>p.type===current());if(!active.some(p=>Math.abs(p.vx)+Math.abs(p.vz)+Math.abs(p.vy)>.012||p.y>.291))return;let steps=2,h=dt/steps;for(let it=0;it<steps;it++){for(const p of active){p.vy-=9.8*h;p.y+=p.vy*h;movePiece(p,p.vx*h,p.vz*h);p.tilt=clamp(p.tilt+p.spin*h,-.25,.25);if(p.y<=.29){p.y=.29;p.vy=Math.abs(p.vy)>.35?-p.vy*.23:0;p.vx*=Math.exp(-h*6);p.vz*=Math.exp(-h*6);p.spin*=Math.exp(-h*10);p.tilt*=Math.exp(-h*12);}let c=center(p.poly),bb=bounds(p.poly);for(const [axis,lim,v]of [['x',4-bb.w/2,'vx'],['z',2.85-bb.d/2,'vz']]){if(Math.abs(c[axis])>lim){let d=Math.sign(c[axis])*lim-c[axis];movePiece(p,axis==='x'?d:0,axis==='z'?d:0);p[v]*=-.23;}}}
+// 薬味は軽く跳ねて滑るが、密集時の断片同士の全衝突は省略する。
+if(isHerb(current())&&active.length>100)continue;
+let grid=new Map();for(let i=0;i<active.length;i++){let p=active[i],c=center(p.poly),bb=bounds(p.poly);for(let x=Math.floor((c.x-bb.w/2)/.6);x<=Math.floor((c.x+bb.w/2)/.6);x++)for(let z=Math.floor((c.z-bb.d/2)/.6);z<=Math.floor((c.z+bb.d/2)/.6);z++){let k=x+','+z;if(!grid.has(k))grid.set(k,[]);grid.get(k).push(i);}}let tested=new Set(),checks=0;collisionPairs:for(const bucket of grid.values())for(let a=0;a<bucket.length;a++)for(let b=a+1;b<bucket.length;b++){if(++checks>(active.length>250?1800:3500))break collisionPairs;let i=bucket[a],j=bucket[b],key=Math.min(i,j)*active.length+Math.max(i,j);if(tested.has(key))continue;tested.add(key);let p=active[i],q=active[j];if(Math.abs(p.y-q.y)>(p.h+q.h)*.5)continue;let pc=center(p.poly),qc=center(q.poly),pb=bounds(p.poly),qb=bounds(q.poly),ox=(pb.w+qb.w)/2-Math.abs(pc.x-qc.x),oz=(pb.d+qb.d)/2-Math.abs(pc.z-qc.z);if(ox<=0||oz<=0)continue;let axis=ox<oz?'x':'z',dep=Math.min(ox,oz);if(dep>.16)continue;let s=qc[axis]>=pc[axis]?1:-1,ip=1/Math.max(.004,area(p.poly)*p.h),iq=1/Math.max(.004,area(q.poly)*q.h),sum=ip+iq;let corr=(dep+.0002)*.65;movePiece(p,axis==='x'?-s*corr*ip/sum:0,axis==='z'?-s*corr*ip/sum:0);movePiece(q,axis==='x'?s*corr*iq/sum:0,axis==='z'?s*corr*iq/sum:0);let v=axis==='x'?'vx':'vz',rel=(q[v]-p[v])*s;if(rel<0){let impulse=-1.15*rel/sum;p[v]-=s*impulse*ip;q[v]+=s*impulse*iq;}}}}
+function strokeQuality(id){let rec=cutRecords[id],ps=pieces.filter(p=>p.type===id),group=ingredients.find(x=>x[0]===id)?.[3]||'dice',ss=rec.strokes,n=ss.length;if(!n)return 0;
+if(group==='loose'){let count=n>=3&&n<=5?1:n<3?n/3:clamp(1-(n-5)*.18);let softness=ss.reduce((s,r)=>s+clamp(1-(r.speed-2)/7),0)/n;return clamp(count*.75+softness*.25);}
+if(group==='mince'){let fine=ps.reduce((s,p)=>s+clamp(1-Math.sqrt(area(p.poly))/.3),0)/Math.max(1,ps.length);let density=ss.reduce((s,r)=>s+Math.exp(-(Math.hypot(r.mx,r.mz)**2)/5),0)/n;return clamp(Math.max(fine,clamp((rec.micro||0)/30))*.65+clamp(n/14)*.2+density*.15);}
+let vertical=[],horizontal=[];for(const r of ss){let a=Math.abs(Math.sin(r.angle));if(a>.8)vertical.push(r.mx);if(a<.6)horizontal.push(r.mz);}function spacing(v){v.sort((a,b)=>a-b);let unique=v.filter((x,i)=>!i||x-v[i-1]>.06);let gaps=unique.slice(1).map((x,i)=>x-unique[i]);if(gaps.length<2)return 0;let mean=gaps.reduce((a,b)=>a+b,0)/gaps.length,sd=Math.sqrt(gaps.reduce((s,x)=>s+(x-mean)**2,0)/gaps.length);return clamp(1-sd/Math.max(.01,mean));}
+let orth=ss.reduce((s,r)=>s+Math.abs(Math.cos(2*r.angle)),0)/n;let shape=ps.reduce((s,p)=>{let b=bounds(p.poly);return s+Math.min(b.w,b.d)/Math.max(b.w,b.d);},0)/Math.max(1,ps.length);return clamp((spacing(vertical)+spacing(horizontal))*.3+orth*.18+shape*.22)*clamp(Math.min(vertical.length,horizontal.length)/3);}
+function quality(){if(stage===1)return queue.reduce((s,id)=>s+strokeQuality(id),0)/queue.length;if(stage===2)return clamp(cook*.35+mixed*.27+clamp(flips/5)*.15+(1-burn)*.13+(1-lost)*.1-burn*.65-lost*.4-Math.max(0,elapsed-22)*.012);if(stage===3){let timeFit=clamp(1-Math.abs(simmer-6)/6),vol=clamp(1-Math.abs(soup-.76)/.38);return clamp(timeFit*.38+vol*.32+clamp(gentle/2)*.3-damage*1.05-burn*.2);}if(stage===4)return clamp((lowFirst?.18:0)+clamp(1-Math.abs(starch-.58)/.58)*.2+mix*.22+glaze*.4-clumps.length*.022-pourBad*.08);if(stage===5)return 0;return 0;}
+// 刻んだ薬味は鍋に移す際に同種・近傍ごとの描画バッチへ集約。
+// 元の仕込みデータと採点は変更せず、投入量は面積・体積として維持する。
+function batchRecipe(source){
+ const result=[],bins=new Map();
+ for(const p of source){
+  if(!isHerb(p.type)||area(p.poly)>.12){result.push(p);continue;}
+  const c=center(p.poly),key=p.type+':'+Math.floor(c.x/.3)+':'+Math.floor(c.z/.3);
+  let bin=bins.get(key);if(!bin){bin={sample:p,area:0,volume:0,x:0,z:0};bins.set(key,bin);}
+  const a=area(p.poly);bin.area+=a;bin.volume+=a*p.h;bin.x+=c.x*a;bin.z+=c.z*a;
+ }
+ for(const b of bins.values()){const x=b.x/b.area,z=b.z/b.area,size=Math.sqrt(b.area);result.push({...b.sample,poly:rect(x,z,size,size),h:b.volume/b.area});}
+ return result;
+}
+// 粘度は投入量だけでなく、撹拌・加熱による糊化を反映する。
+let viscosity=0,gelatinized=0;
+let physicsClock=0;
+function next(){if(stage===6)return;
+// 工程の達成率は採点にのみ使用し、進行ボタンをロックしない。
+// 火力や調味料の選択にかかわらず、押した時点の料理を次工程へ引き継ぐ。
+release();if(stage>0&&stage<5)scores.push(quality()*100);stage++;elapsed=0;$('heat').value=0;setHeat();pan={x:0,y:0,z:0,tilt:0};if(stage===1)prepare();if(stage===2){tool='pan';meatLoosen=0;meat=[];}if(stage===3){const auto=[];if(!brothAdded){brothAdded=true;seasoningAmounts.broth=1;auto.push('鶏ガラスープ160ml');}if(!seasoningAmounts.sugar){seasoningAmounts.sugar=1;auto.push('砂糖ひとつまみ');}toast((auto.length?auto.join('・')+'と':'投入済みのスープに')+'豆腐を加えました');tool='ladle';recipe=pieces.flatMap(p=>{
+ // 豆腐は複製せず、切断形状・厚み・仕込んだ量をそのまま維持する。
+ // 底面の縮尺は従来の鍋内表示と共通。厚みにはこの縮尺を掛けない。
+ const multiplier=p.type==='tofu'?tofuAmountMultiplier():1,result=[];
+ for(let i=0;i<Math.ceil(multiplier);i++){
+  const fraction=Math.min(1,multiplier-i);if(fraction<.00001)continue;
+  const scale=.66*Math.sqrt(fraction),a=rnd(0,TAU),r=Math.sqrt(Math.random())*2.2,c=center(p.poly);
+  result.push({...p,poly:p.poly.map(v=>({x:(v.x-c.x)*scale+Math.cos(a)*r,z:(v.z-c.z)*scale+Math.sin(a)*r})),h:p.type==='tofu'?tofuHeightCm*TOFU_SCALE:p.h*.66,y:1.12,vx:0,vz:0,vy:0});
+ }
+ return result;
+});}if(stage===3){
+ // 前工程でこぼれた肉・醤は片付け、鍋の中の食材だけを引き継ぐ。
+ meat=meat.filter(m=>!m.out);drops=[];steam=[];
+ for(const m of meat){const r=Math.hypot(m.x,m.z),limit=2.35-m.r;if(r>limit){m.x*=limit/r;m.z*=limit/r;}m.y=Math.max(1.12+m.r,wokHeight(Math.hypot(m.x,m.z)+m.r)+m.r+.025);m.vx=m.vz=m.vy=0;}
+ // 刻んだ輪郭を維持し、矩形へ統合しない。
+ for(const p of recipe)containFood(p);
+ stirHerbs=[];
+}if(stage===4){tool='bowl';lastMix=t;setHeat();}if(stage===5)tool='sesame';if(stage===6)finish();ui();}
+$('next').onclick=next;function restartGame(){location.reload();}$('restart').onclick=restartGame;$('reset').onclick=restartGame;
+function flip(speed){if(t-lastFlip<.25)return;lastFlip=t;flips++;agitation=1;noiseSE('pan',.7);let excess=speed>11;for(const p of meat){if(p.out)continue;if(!p.sauce&&meatLoosen<.15)continue;p.vy=rnd(2.3,4.2);p.vx=rnd(-1,1)*(excess?4:1);p.vz=rnd(-1,1)*(excess?4:1);if(excess&&Math.random()<.08){p.out=true;lost=clamp(lost+1/130);}}for(const p of stirHerbs){p.vy=rnd(1.1,2);p.vx+=rnd(-.3,.3);p.vz+=rnd(-.3,.3);}for(const p of recipe){p.vy=rnd(.5,1);p.vx+=rnd(-.3,.3);p.vz+=rnd(-.3,.3);}if(stage===4&&heat>.75&&mix>.65&&starch>.25){glaze=clamp(glaze+.16);emulsify++;starchStep=3;}if(excess)toast('振りすぎ！具材が鍋の外へ');}
+function emitTop(id,x,z,count=1){chosenTops.add(id);for(let i=0;i<count;i++){drops.push({x:x+rnd(-.15,.15),z:z+rnd(-.15,.15),y:3,vy:rnd(-1,-.5),vx:rnd(-.12,.12),vz:rnd(-.12,.12),type:id,r:id==='cilantro'?.16:id==='threads'?.07:.055});topAmounts[id]+=(id==='cilantro'?.022:id==='threads'?.012:.009);}noiseSE(id==='pepper'?'grind':'pour',.22);}
+// 木柄の投影と同じ位置にだけ、画面上の掴み判定を置く。
+function panGripPoints(){return [project(pan.x,1.65+pan.y,3.1+pan.z),project(pan.x,1.85+pan.y,5.1+pan.z)];}
+function panGripCircle(){const [a,b]=panGripPoints();return {x:(a[0]+b[0])/2,y:(a[1]+b[1])/2,r:clamp(Math.hypot(b[0]-a[0],b[1]-a[1])*.55+12,40,64)};}
+function hitsPanGrip(e){const c=panGripCircle(),rect=canvas.getBoundingClientRect();return Math.hypot(e.clientX-rect.left-c.x,e.clientY-rect.top-c.y)<=c.r;}
+function drawPanGrip(){
+ const c=panGripCircle();renderList.push({layer:7,d:0,run(){ctx.save();ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,TAU);ctx.fillStyle=drag?.tool==='pan'?'#ffc87535':'#ffc87516';ctx.fill();ctx.strokeStyle='#ffd58b';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.stroke();ctx.setLineDash([]);ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillStyle='#ffe2a6';ctx.fillText('持ち手をドラッグ',clamp(c.x,60,W-60),c.y+c.r+16);ctx.restore();}});
+}
+let serial=0;
+canvas.addEventListener('selectstart',e=>e.preventDefault());
+canvas.addEventListener('dragstart',e=>e.preventDefault());
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{e.preventDefault();if(stage===6)return;initAudio();let p=ground(e,stage===1?.3:1.15);if(stage===0){let i=ingredients.findIndex((_,i)=>{let {x,z}=ingredientPosition(i);return Math.hypot(p.x-x,p.z-z)<1.15;});if(i>=0){let id=ingredients[i][0];changePortion(id,1);}return;}
+let chosen=tool;if(stage===1)chosen='knife';
+if(stage===2&&tool!=='douban'){
+ if(hitsPanGrip(e))chosen='pan';
+ else if(Math.hypot(p.x,p.z)<2.55)chosen='ladle';
+ else return;
+}
+if(stage===4){
+ if(hitsPanGrip(e))chosen='pan';
+ else if(chosen==='pan')return;
+}
+if(stage===3)chosen='ladle';drag={id:e.pointerId,serial:++serial,tool:chosen,a:p,prev:p,p:p,start:performance.now(),last:performance.now(),length:0,speed:0,hits:0,path:[p],angle:null,sign:0,turns:0};drag.grip=chosen==='pan'&&hitsPanGrip(e);canvas.setPointerCapture(e.pointerId);if(stage===1){knife.x=p.x;knife.z=p.z;drag.freeCut=freeKnife();knife.angle=drag.freeCut?knife.angle:knifeDirection==='vertical'?Math.PI/2:0;drag.cutAxis=knifeDirection;drag.cutAnchor={...p};}if(stage===2&&chosen==='douban'&&Math.hypot(p.x,p.z)<2.55)addDouban(p.x,p.z);if(stage===5&&Math.hypot(p.x,p.z)<2.6){if(['chili','scallion','cilantro'].includes(chosen))emitTop(chosen,p.x,p.z,chosen==='cilantro'?5:chosen==='scallion'?4:1);}});
+function handleMove(e){if(!drag||e.pointerId!==drag.id)return;let p=ground(e,stage===1?.3:1.15),dx=p.x-drag.p.x,dz=p.z-drag.p.z,d=Math.hypot(dx,dz),now=performance.now(),dt=Math.max(.008,(now-drag.last)/1000);drag.speed=clamp(d/dt,0,25);const smoothWeight=1-Math.exp(-dt*12);drag.filteredSpeed=(drag.filteredSpeed??0)+(drag.speed-(drag.filteredSpeed??0))*smoothWeight;drag.length+=d;drag.prev=drag.p;drag.p=p;drag.path.push(p);if(drag.path.length>300)drag.path.shift();drag.last=now;
+if(drag.tool==='knife'&&drag.freeCut){
+ // ネギ・ニラだけは実際の移動区間で切断。往復中も同じ断片を再び刻める。
+ knife.x=p.x;knife.z=p.z;
+ const a=drag.cutAnchor,travel=Math.hypot(p.x-a.x,p.z-a.z);
+ if(travel>=.012){
+  knife.angle=Math.atan2(p.z-a.z,p.x-a.x);
+  drag.serial=++serial;cut(a,p);drag.cutAnchor={...p};
+ }
+}
+if(drag.tool==='knife'&&!drag.freeCut){
+ // 豆腐の一刀の向きだけをボタンで固定。低速でも手ぶれのない直線切断。
+ const vertical=drag.cutAxis==='vertical';
+ const end=vertical?{x:drag.a.x,z:p.z}:{x:p.x,z:drag.a.z};
+ knife.x=clamp(end.x,-4,4);knife.z=clamp(end.z,-2.8,2.8);knife.angle=vertical?Math.PI/2:0;
+ drag.cutEnd=end;
+ // 速度ではなく始点からの距離で判定し、低速でも直線を維持。
+ const reach=vertical?end.z-drag.a.z:end.x-drag.a.x;
+ if(Math.abs(reach-(drag.lastCutReach??0))>=.012){cut(drag.a,end);drag.lastCutReach=reach;}
+}
+if(drag.tool==='pan'&&drag.grip){pan.x=clamp(p.x-drag.a.x,-.5,.5);pan.z=clamp(p.z-drag.a.z,-.5,.5);pan.y=clamp(-dz*1.8,-.1,.7);pan.tilt=clamp(dz,-.3,.3);agitation=clamp(agitation+d*.25);if(drag.speed>3.5&&Math.abs(dz)>.055)flip(drag.speed);}
+let inside=Math.hypot(p.x,p.z)<2.55;
+if(drag.tool==='ladle'){ladle=p;if(inside){agitation=clamp(agitation+d*.4);if(stage===2){for(const h of stirHerbs){const c=center(h.poly);if(Math.hypot(c.x-p.x,c.z-p.z)<.85){h.vx+=dx*2;h.vz+=dz*2;}}mixed=clamp(mixed+d*.018);meatLoosen=clamp(meatLoosen+d*.045);for(const m of meat){if(m.out)continue;let dist=Math.hypot(m.x-p.x,m.z-p.z);if(dist<1){m.vx+=dx*(2+meatLoosen*2);m.vz+=dz*(2+meatLoosen*2);if(!m.sauce){m.vx+=m.x*d*meatLoosen*.65;m.vz+=m.z*d*meatLoosen*.65;}}}}if(stage>=3){if((drag.filteredSpeed??0)<7||d<.045){gentle+=d*.25;for(const q of recipe){let c=center(q.poly);if(Math.hypot(c.x-p.x,c.z-p.z)<1){q.vx+=dx*2;q.vz+=dz*2;q.tilt=rnd(-.12,.12);}}}else if((drag.filteredSpeed??0)>8.5&&d>.07&&t-lastTofuBreak>.4){let candidates=recipe.filter(q=>q.type==='tofu'&&area(q.poly)>.015);let q=candidates.find(q=>{let c=center(q.poly);return Math.hypot(c.x-p.x,c.z-p.z)<1;});if(q&&recipe.length<2600){lastTofuBreak=t;damage=clamp(damage+.025);let c=center(q.poly),a={x:c.x-5,z:c.z},b={x:c.x+5,z:c.z};let parts=[clip(q.poly,a,b,1),clip(q.poly,a,b,-1)];recipe.splice(recipe.indexOf(q),1);for(let poly of parts)if(poly.length>=3)recipe.push({...q,poly,h:q.h*.72,vx:rnd(-1,1),vz:rnd(-1,1),vy:.5});noiseSE('pour',.25);}if(t-lastSfx>.8){toast('豆腐がクラッシュ！優しく横に滑らせて');lastSfx=t;}}}if(stage===4){mix=clamp(mix+d*.035);lastMix=t;clumps.forEach(c=>c.r-=d*.04);clumps=clumps.filter(c=>c.r>.02);}}}
+if(drag.tool==='douban')bowl=p;
+if(drag.tool==='bowl'){bowl=p;if(inside){let angle=Math.atan2(p.z,p.x);if(drag.angle!==null){let da=Math.atan2(Math.sin(angle-drag.angle),Math.cos(angle-drag.angle));if(drag.speed<5)pourCircle+=Math.abs(da);if(Math.abs(da)<.004&&d>.12)pourBad+=.012;}drag.angle=angle;}}
+if(stage===5&&inside){let id=drag.tool;if(id==='pepper'){let s=Math.sign(dx);if(s&&drag.sign&&s!==drag.sign&&Math.abs(dx)>.015)emitTop(id,p.x,p.z,4);if(s)drag.sign=s;}if(id==='sesame'){let a=Math.atan2(p.z,p.x);if(drag.angle!==null){let da=Math.abs(Math.atan2(Math.sin(a-drag.angle),Math.cos(a-drag.angle)));if(Math.hypot(p.x,p.z)>1.2&&Math.hypot(p.x,p.z)<2.65){topCircle+=da;glaze=clamp(glaze+da*.025);}}drag.angle=a;}if(id==='threads'&&d>.02)emitTop(id,p.x*.25,p.z*.25,2);}
+}
+canvas.addEventListener('pointermove',e=>{let samples=e.getCoalescedEvents?.();if(samples?.length){const stride=Math.max(1,Math.ceil(samples.length/6));for(let i=0;i<samples.length;i+=stride)handleMove(samples[i]);if((samples.length-1)%stride)handleMove(samples[samples.length-1]);}else handleMove(e);});
+function release(e){if(!drag||e&&e.pointerId!==drag.id)return;let d=drag;if(stage===1&&d.freeCut){d.serial=++serial;cut(d.cutAnchor,d.p);}else if(stage===1&&d.cutEnd)cut(d.a,d.cutEnd);if(stage===1&&d.length>.1&&d.hits){let end=d.cutEnd||d.p,angle=d.freeCut?Math.atan2(end.z-d.a.z,end.x-d.a.x):d.cutAxis==='vertical'?Math.PI/2:0;cutRecords[current()].strokes.push({angle,mx:(end.x+d.a.x)/2,mz:(end.z+d.a.z)/2,speed:d.length/Math.max(.05,(performance.now()-d.start)/1000),length:d.length});strokes++;}drag=null;}
+canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);window.addEventListener('blur',()=>release());
+function update(dt){elapsed+=dt;
+updateIngredientVisuals(dt);
+if(stage>=4&&stage<=5){
+ if(heat>.2&&starch>.01)gelatinized=clamp(gelatinized+dt*heat*.24);
+ const target=clamp(starch/.58)*gelatinized*(.35+.65*mix);
+ viscosity+=(target-viscosity)*(1-Math.exp(-dt*1.7));
+}
+agitation=Math.max(0,agitation-dt*.35);pan.x*=Math.exp(-dt*6);pan.z*=Math.exp(-dt*6);pan.y*=Math.exp(-dt*6);pan.tilt*=Math.exp(-dt*7);
+if(stage===1){physicsClock+=dt;if(physicsClock>=1/30){physics(Math.min(physicsClock,.05));physicsClock=0;}}else physicsClock=0;
+if(stage===2){
+ if(heat>0&&saladOilAdded&&cutIngredientsAdded&&!aromaStarted){aromaStarted=true;toast('選んで刻んだ香味野菜の香りを引き出します');}
+ if(heat>0&&saladOilAdded&&(cutIngredientsAdded||selected.size===0))aromaProgress=clamp(aromaProgress+dt*heat*(.18+agitation*.12));
+ if(aromaProgress>=1&&beefAdded)cook=clamp(cook+dt*heat*(.10+mixed*.06));
+ if(cook>=.9&&seasoningsAdded){
+  if(!sauceStarted){sauceStarted=true;toast('調味料を混ぜて香りを立てます');}
+  seasoningProgress=clamp(seasoningProgress+dt*heat*(.25+agitation*.25));
+ }
+ if(saladOilAdded&&cutIngredientsAdded)burn=clamp(burn+dt*heat*(agitation<.15?.065:.004));for(const m of meat)if(!m.sauce&&!m.out&&meatLoosen<.95){const hold=(1-meatLoosen)**3*24*dt;m.vx+=(m.bx-m.x)*hold;m.vz+=(m.bz-m.z)*hold;if(meatLoosen<.015){m.x=m.bx;m.z=m.bz;m.vx=m.vz=0;}}}
+if(stage===3){if(heat>=.25&&heat<=.72)simmer+=dt;soup=Math.max(0,soup-dt*(heat>.75?.085:heat>.25?.025:.008));if(soup<.18)burn=clamp(burn+dt*.1);}
+if(stage===4){if(starch>.02)starchStep=Math.max(starchStep,2);if(starch>.08&&t-lastMix>2.3&&Math.random()<dt*1.8&&clumps.length<45)clumps.push({x:rnd(-1.8,1.8),z:rnd(-1.8,1.8),r:.08});if(heat>.78&&glaze>.1&&starchStep===3)glaze=clamp(glaze+dt*.02);}
+if(stage>=2&&stage<=5){for(const m of meat){m.vy-=7*dt;m.x+=m.vx*dt;m.z+=m.vz*dt;m.y+=m.vy*dt;m.vx*=Math.exp(-dt*3);m.vz*=Math.exp(-dt*3);// 鍋の実際の内壁（底半径1.35／縁半径2.86）に粒の半径を加えて接触判定。
+let radial=Math.hypot(m.x,m.z),contactRadius=Math.min(2.86,radial+m.r);
+let floor=stage>=3?Math.max(1.12+m.r,wokHeight(contactRadius)+m.r+.025):wokHeight(contactRadius)+m.r+.025;if(!m.out&&m.y<floor){m.y=floor;m.vy=0;}if(stage===2&&(!beefAdded||m.sauce||meatLoosen>.1))settleToWokCenter(m,m.x,m.z,floor,dt);if(!m.out&&Math.hypot(m.x,m.z)>2.55){let r=Math.hypot(m.x,m.z);m.x*=2.5/r;m.z*=2.5/r;}if(m.out&&m.y<-.1)m.y=-.1;}
+for(const p of recipe){movePiece(p,p.vx*dt,p.vz*dt);p.vx*=Math.exp(-dt*4);p.vz*=Math.exp(-dt*4);p.vy-=4*dt;p.y+=p.vy*dt;containFood(p);}
+if(stage>=3&&Math.random()<dt*heat*(15-viscosity*8))steam.push({x:rnd(-2,2),z:rnd(-2,2),y:1.2,r:.04+viscosity*.045,life:.7+viscosity*.65,bubble:true});if(Math.random()<dt*(burn>.2?8:heat*3))steam.push({x:rnd(-1.7,1.7),z:rnd(-1.7,1.7),y:1.6,r:.09,life:2,bubble:false});
+if(drag&&Math.hypot(drag.p.x,drag.p.z)<2.55){emitClock+=dt;if(emitClock>.07){emitClock=0;if(stage===2&&drag.tool==='douban')addDouban(drag.p.x,drag.p.z);let moving=performance.now()-drag.last<150&&drag.speed>.18;if(stage===4&&drag.tool==='bowl'&&moving&&starch<1.5){
+ // 一振り（移動距離0.65）で7.5%。静止中の連続投入はしない。
+ if(drag.length-(drag.lastStarchLength??0)>=.65&&t-(drag.lastStarchTime??-10)>.22){
+ drag.lastStarchLength=drag.length;drag.lastStarchTime=t;
+ for(let j=0;j<3;j++)drops.push({x:drag.p.x+rnd(-.05,.05),z:drag.p.z+rnd(-.05,.05),y:2.9-j*.09,vy:-5,vx:0,vz:0,type:'starch',dose:.025,r:.07});noiseSE('pour',.22);
+ }
+}if(stage===5&&moving&&['sesame','chili','scallion'].includes(drag.tool))emitTop(drag.tool,drag.p.x,drag.p.z,drag.tool==='scallion'?2:1);}}}
+for(let i=drops.length-1;i>=0;i--){let d=drops[i];d.vy-=8*dt;d.y+=d.vy*dt;d.x+=d.vx*dt;d.z+=d.vz*dt;if(d.y<1.2){if(d.type==='starch'){starch=Math.min(1.5,starch+(d.dose??.025));if(!lowFirst||heat>.35||pourCircle<.6||t-lastMix>3){if(Math.random()<.5&&clumps.length<60)clumps.push({x:d.x,z:d.z,r:rnd(.06,.13)});}}else if(garnish.length<1800){let stack=0;for(let j=Math.max(0,garnish.length-160);j<garnish.length;j++){const g=garnish[j],dx=g.x-d.x,dz=g.z-d.z;if(dx*dx+dz*dz<.0196)stack+=.025;}garnish.push({...d,y:1.25+Math.min(.42,stack),angle:rnd(0,TAU)});}drops.splice(i,1);}}
+for(let i=steam.length-1;i>=0;i--){let s=steam[i];s.life-=dt;if(s.bubble){s.r+=dt*(.09-viscosity*.045);s.y+=dt*(.08-viscosity*.045);}else{s.y+=dt*.45;s.r+=dt*.12;}if(s.life<0)steam.splice(i,1);}if(stage===6){for(let i=steam.length-1;i>=0;i--){const s=steam[i];s.life-=dt;s.y+=dt*.45;s.r+=dt*.12;if(s.life<=0)steam.splice(i,1);}orbit+=dt*.16;if(Math.random()<dt*3)steam.push({x:rnd(-1.4,1.4),z:rnd(-1.4,1.4),y:1.8,r:.07,life:2});}
+if(hissGain&&ac){let v=audioOn&&stage>=2&&stage<=5?heat*(stage===2?.065:.025):0;hissGain.gain.setTargetAtTime(v,ac.currentTime,.15);if(stage>=3&&stage<=4&&heat>.1&&Math.random()<dt*3){note(rnd(90,180),ac.currentTime,.045,.018*heat,'sine',master);}}
+if(t>toastUntil)$('toast').style.opacity=0;
+}
+// 容器も内容物もプリミティブによる立体表現。投入位置を共有する。
+function animateIngredient(id){
+ pourAnimation={id,life:1.1};
+ const colors={oil:'#d9b14e',soy:'#673322',wine:'#c59549',broth:'#c59650',sesame:'#d2a23b',chili:'#c83419',douban:'#ce4223',touchi:'#623b2c',sugar:'#f1e5cd'};
+ if(id!=='herbs'&&id!=='beef'){
+  const color=colors[id]||'#ce8b43';
+  if(id==='sugar')for(let i=0;i<14;i++)meat.push({x:rnd(-.8,.8),z:rnd(-.8,.8),y:2.8,vy:-1,vx:0,vz:0,r:.026,color,sauce:true,out:false,sugar:true});
+  else for(let i=0;i<14;i++)seasoningFilms.push({x:rnd(-1.5,1.5),z:rnd(-1.5,1.5),r:rnd(.12,.26),color,id,age:0});
+ }
+}
+function updateIngredientVisuals(dt){
+ if(pourAnimation){pourAnimation.life-=dt;if(pourAnimation.life<=0)pourAnimation=null;}
+ if(stage===2){
+  for(const p of stirHerbs){
+   p.vy-=6*dt;p.y+=p.vy*dt;movePiece(p,p.vx*dt,p.vz*dt);p.vx*=Math.exp(-dt*4);p.vz*=Math.exp(-dt*4);
+   const c=center(p.poly),b=bounds(p.poly),reach=Math.hypot(b.w,b.d)*.5,limit=Math.max(.1,2.45-reach),r=Math.hypot(c.x,c.z);
+   if(r>limit)movePiece(p,c.x*(limit/r-1),c.z*(limit/r-1));
+   const cc=center(p.poly),floor=wokHeight(Math.hypot(cc.x,cc.z)+reach)+.06;
+   if(p.y<floor){p.y=floor;p.vy=0;}
+   settleToWokCenter(p,cc.x,cc.z,floor,dt);
+  }
+  for(const f of seasoningFilms){f.age+=dt;if(agitation>.1){const a=dt*agitation*.3,x=f.x;f.x=x*Math.cos(a)-f.z*Math.sin(a);f.z=x*Math.sin(a)+f.z*Math.cos(a);}}
+  for(const m of meat)if(m.sugar&&m.y<1.5)m.r=Math.max(0,m.r-dt*.012);
+ }
+}
+function drawSeasoningFilms(offset){
+ for(const f of seasoningFilms){const r=Math.hypot(f.x,f.z),y=(brothAdded?1.105:wokHeight(r)+.035)+offset;
+  disk(f.x,y,f.z,f.r*(1+Math.min(.4,f.age*.025)),f.color,12);
+  if(['oil','sesame','chili'].includes(f.id))line3([f.x-f.r*.3,y+.008,f.z],[f.x+f.r*.25,y+.008,f.z-.035],'#e7c276',.014);
+ }
+}
+function drawIngredientContainer(){
+ const id=pourAnimation?.id||(tool==='douban'?'douban':selectedSeasoning),active=!!pourAnimation;
+ const x=active?-1.2:-3.65,z=active?-.6:-.8,y=2.7;
+ const def=seasoningDefs.find(d=>d[0]===id),name=id==='oil'?'サラダ油':id==='herbs'?'切った香味野菜':id==='beef'?'牛ひき肉':def?.[1]||'調味料';
+ const colors={oil:'#d9b14e',soy:'#673322',wine:'#c59549',broth:'#c59650',sesame:'#d2a23b',chili:'#c83419',douban:'#ce4223',touchi:'#623b2c',sugar:'#f1e5cd',herbs:'#8daf57',beef:'#d87072'};
+ const color=colors[id]||'#b46734';
+ if(['oil','soy','wine','sesame','chili'].includes(id)){
+  extrude(ellipsePoly(x,z,.24,.24,16),y,.72,id==='soy'?'#4c3526':'#73927e');
+  extrude(ellipsePoly(x,z,.205,.205,16),y+.04,.47,color);
+  extrude(ellipsePoly(x,z,.105,.105,12),y+.72,.30,'#a7b5a0');
+  disk(x,y+1.035,z,.12,id==='wine'?'#ac3327':'#453128',16);
+  poly3([[x-.18,y+.20,z+.245],[x+.18,y+.20,z+.245],[x+.18,y+.49,z+.245],[x-.18,y+.49,z+.245]],'#f0deaa');
+  line3([x-.13,y+.55,z+.2],[x-.13,y+.85,z+.10],'#e5edd1',.025);
+ }else{
+  ball(x,y,z,.48,'#a2bec4',.55);disk(x,y+.16,z,.44,'#eee5d1',24);disk(x,y+.17,z,.36,color,24);
+  if(['touchi','douban','beef','herbs','sugar'].includes(id))for(let i=0;i<12;i++){const a=i*2.39996,r=.28*Math.sqrt((i+.5)/12);ball(x+Math.cos(a)*r,y+.20,z+Math.sin(a)*r,.045,shade(color,.85+(i%3)*.12),.7);}
+ }
+ label(x,y+1.4,z,name+(active?'：投入中':''));
+ if(active&&id!=='herbs'&&id!=='beef'){
+  const progress=1-pourAnimation.life/1.1;
+  for(let i=0;i<6;i++){const u=(progress*2+i/6)%1;ball(x*(1-u),y-u*1.9,z*(1-u),id==='sugar'?.025:.055,color,.9);}
+ }
+}
+// 肉は挽いた筋を含む不揃いな塊、醤は油を含んだペーストとして描画。
+function drawMinceOrPaste(m,y,color,index){
+ const seed=index*2.39996323, r=m.r;
+ if(!m.sauce){
+  // 固定シードの肉塊と短い挽き筋。毎フレーム乱数を使わず形を維持する。
+  const ca=Math.cos(seed),sa=Math.sin(seed),browning=clamp(cook/.75),char=clamp((burn-.6)/.4);
+  ball(m.x,y,m.z,r*(1+.14*Math.sin(seed*3)),color,.66);
+  const details=meat.length>220?0:1;
+  for(let j=0;j<details;j++){
+   const u=(j-1)*r*.42,shift=Math.sin(seed+j*2)*r*.28;
+   const ax=m.x+ca*u-sa*shift,az=m.z+sa*u+ca*shift;
+   const bx=ax+ca*r*.85,bz=az+sa*r*.85;
+   ball(ax,y+r*.14,az,r*.47,shade(color,j%2?.9:1.1),.65);
+   line3([ax,y+r*.35,az],[bx,y+r*.31,bz],shade(color,j%2?.79:1.14),r*.28);
+  }
+  if(index%8===0){
+   const fat=browning<.4?'#efd6c7':'#d6b58a';
+   ball(m.x-sa*r*.35,y+r*.4,m.z+ca*r*.35,r*.22,shade(fat,1-char*.9),.6);
+  }
+  return;
+ }
+ if(index%3!==0||meat.length>350){ball(m.x,y,m.z,r*1.4,color,.48);return;}
+ if(m.sauce){
+  ball(m.x,y,m.z,r*1.55,color,.48);
+  ball(m.x+Math.cos(seed)*r*.6,y+r*.12,m.z+Math.sin(seed)*r*.55,r*.75,shade(color,1.15),.52);
+  if(index%3===0){
+   const a=seed,dx=Math.cos(a)*r*.55,dz=Math.sin(a)*r*.55;
+   line3([m.x-dx,y+r*.35,m.z-dz],[m.x+dx,y+r*.35,m.z+dz],shade(color,1.42),r*.28);
+   ball(m.x+r*.3,y+r*.42,m.z-r*.18,r*.16,'#e6ab62',.48);
+  }
+ }else{
+  ball(m.x,y,m.z,r,color,.73);
+  if(index%2===0){
+   const dx=Math.cos(seed)*r*.52,dz=Math.sin(seed)*r*.52;
+   ball(m.x+dx,y+r*.22,m.z+dz,r*.63,shade(color,.91),.7);
+   line3([m.x-dx*.6,y+r*.65,m.z-dz*.6],[m.x+dx*.65,y+r*.68,m.z+dz*.65],shade(color,1.17),r*.23);
+  }
+  // 肉の中に見える白い脂身も、加熱とともに飴色へ。
+  if(index%5===0)ball(m.x-r*.25,y+r*.68,m.z+r*.18,r*.23,cook<.3?'#efd4c5':'#cfaa79',.6);
+ }
+}
+// 青白磁の高台付き中華皿。反り上がった縁、呉須の雷文、朱と金の花文。
+function chinesePlate(){
+ const theme=plateThemes[plateStyle];
+ renderLayer=1;
+ extrude(ellipsePoly(0,0,1.75,1.75,64),.10,.25,'#c0d0cc');
+ disk(0,.105,0,1.62,'#91aaa9',64);
+ // 回転しても壊れない一括描画。放射状の面を個別に深度ソートしない。
+ const n=64;
+ const plateRings=[[3.87,1.025,theme.shade],[3.82,1.06,theme.body],[3.73,1.065,theme.body],[3.30,.97,theme.inner],[3.05,.80,theme.shade],[2.82,.66,theme.shade],[2.64,.56,theme.inner],[2.38,.52,theme.inner]];
+ const rings=plateRings.map(([r,y,color])=>({color,points:Array.from({length:n},(_,i)=>project(Math.cos(i/n*TAU)*r,y,Math.sin(i/n*TAU)*r))}));
+ renderList.push({layer:1.1,d:0,run(){ctx.save();for(const ring of rings){ctx.beginPath();ring.points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fillStyle=ring.color;ctx.fill();ctx.strokeStyle=ring.color;ctx.lineWidth=.7;ctx.stroke();}ctx.restore();}});
+ // 縁の装飾は皿本体より後、料理より前に固定。
+ renderLayer=1.2;
+ function rim(radius,y,color,width){for(let i=0;i<n;i++){let a=i/n*TAU,b=(i+1)/n*TAU;line3([Math.cos(a)*radius,y,Math.sin(a)*radius],[Math.cos(b)*radius,y,Math.sin(b)*radius],color,width);}}
+ rim(3.84,1.06,theme.gold,.035);rim(3.73,1.075,theme.ink,.04);rim(3.30,.97,theme.ink,.035);rim(2.89,.715,theme.flower,.025);
+ // 角張った連続雷文を縁の帯に配置。
+ for(let i=0;i<40;i++){
+  const a=i/40*TAU;
+  const path=[[-.057,3.39],[-.057,3.63],[.044,3.63],[.044,3.47],[-.012,3.47],[-.012,3.56]];
+  for(let j=0;j<path.length-1;j++){
+   let [da,ra]=path[j],[db,rb]=path[j+1];
+   line3([Math.cos(a+da)*ra,1.072,Math.sin(a+da)*ra],[Math.cos(a+db)*rb,1.072,Math.sin(a+db)*rb],theme.ink,.022);
+  }
+ }
+ for(let i=0;i<8;i++){
+  let a=i/8*TAU,x=Math.cos(a)*3.12,z=Math.sin(a)*3.12;
+  for(let j=0;j<5;j++){let b=j/5*TAU;disk(x+Math.cos(b)*.07,.90,z+Math.sin(b)*.07,.055,theme.flower,8);}
+  disk(x,.905,z,.035,theme.gold,8);
+ }
+}
+// 容器・落下中・盛り付け後で同じ食材の特徴を保つ手続きモデル。
+function toppingModel(id,x,y,z,r=.06,angle=0){
+ const ca=Math.cos(angle),sa=Math.sin(angle);
+ function at(u,v,h=0){return [x+ca*u-sa*v,y+h,z+sa*u+ca*v];}
+ if(id==='scallion'){
+  const size=Math.max(.065,r*1.25),points=ellipsePoly(x,z,size,size*.78,12);
+  extrude(points,y,.035,'#328840');disk(x,y+.037,z,size*.73,'#a9cf65',12);disk(x,y+.04,z,size*.43,'#477e35',10);
+ }else if(id==='pepper'){
+  ball(x-r*.36,y,z,r*.78,'#a34835',.72);ball(x+r*.38,y+.01,z,r*.66,'#793426',.68);
+  ball(x,y+.032,z,r*.37,'#30271d',.68);line3(at(-r*.5,0,.04),at(r*.15,r*.3,.045),'#d49161',.015);
+ }else if(id==='cilantro'){
+  const size=Math.max(.16,r*1.5);
+  for(let k=0;k<3;k++){
+   const a=angle+k*TAU/3,dx=Math.cos(a),dz=Math.sin(a),px=x+dx*size*.62,pz=z+dz*size*.62;
+   const leaf=[];for(let j=0;j<16;j++){const b=j/16*TAU,rr=size*(j%2?.62:.83);leaf.push([px+Math.cos(b)*rr,y+.025,pz+Math.sin(b)*rr*.72]);}
+   poly3(leaf,k%2?'#489d4c':'#348746');line3([x,y+.03,z],[px+dx*size*.5,y+.035,pz+dz*size*.5],'#a0c671',.018);
+  }
+ }else if(id==='threads'){
+  for(let j=0;j<6;j++){const u=j/6,v=(j+1)/6;line3(at((u-.5)*.55,Math.sin(u*Math.PI*1.6)*.095,Math.sin(u*Math.PI)*.06),at((v-.5)*.55,Math.sin(v*Math.PI*1.6)*.095,Math.sin(v*Math.PI)*.06),j<3?'#d8432b':'#a7211c',.018);}
+ }else if(id==='sesame'||id==='chili'){
+  const color=id==='sesame'?'#cda13b':'#bd3019';
+  ball(x,y,z,Math.max(.045,r*1.25),color,.28);line3(at(-r*.45,-r*.2,.012),at(r*.2,-r*.35,.013),id==='sesame'?'#ffe49a':'#ff9a43',.015);
+ }
+}
+function toppingContainer(id,x,y,z){
+ const bottle=id==='sesame'||id==='chili';
+ if(bottle){
+  const oil=id==='sesame'?'#bc8b29':'#b32c16';
+  extrude(ellipsePoly(x,z,.25,.25,16),y,.64,id==='sesame'?'#759079':'#796449');
+  extrude(ellipsePoly(x,z,.22,.22,16),y+.04,.42,oil);
+  extrude(ellipsePoly(x,z,.12,.12,12),y+.64,.25,'#b6b6a0');
+  extrude(ellipsePoly(x,z,.135,.135,12),y+.87,.09,id==='chili'?'#a0251b':'#37302a');
+  poly3([[x-.18,y+.2,z+.225],[x+.18,y+.2,z+.225],[x+.18,y+.48,z+.225],[x-.18,y+.48,z+.225]],'#f0dfb2');
+  line3([x-.13,y+.52,z+.20],[x-.13,y+.79,z+.10],'#e8e6be',.032);
+ }else if(id==='pepper'){
+  extrude(ellipsePoly(x,z,.25,.25,16),y,.15,'#392820');
+  extrude(ellipsePoly(x,z,.21,.21,16),y+.15,.5,'#a58a68');
+  for(let i=0;i<9;i++){let a=i*2.4;ball(x+Math.cos(a)*.14,y+.22+(i%3)*.12,z+Math.sin(a)*.14,.045,'#713d2a',.8);}
+  ball(x,y+.76,z,.29,'#613b25',.7);ball(x,y+.96,z,.055,'#b1aaa0',.5);
+ }else{
+  // 青白磁の器：外側、開口部、食材の順に固定して描く。
+  const layer=renderLayer;renderLayer=layer;
+  ball(x,y+.12,z,.48,'#adccd0',.52);
+  renderLayer=layer+.01;disk(x,y+.23,z,.44,'#f0eee1',32);disk(x,y+.235,z,.36,'#d2e0d3',28);
+  renderLayer=layer+.02;
+  for(let i=0;i<12;i++){let a=i*2.39996,rr=.27*Math.sqrt((i+.5)/12);toppingModel(id,x+Math.cos(a)*rr,y+.25+(i%3)*.012,z+Math.sin(a)*rr,id==='cilantro'?.085:.045,a);}
+  renderLayer=layer;
+ }
+}
+// サラサラ時は速く細かな波と分離油、とろみ時は遅い大きなうねり・厚い照り。
+// 盛り付け用の連続したあんの山。豆腐・肉・薬味も同じ高さ関数に合わせる。
+function platedSurface(x,z){const r=Math.hypot(x,z);return 1.09+.28*Math.max(0,1-(r/2.49)**2);}
+function drawSoup(offset){
+ if(stage>=5){
+  const rings=[];
+  for(let i=0;i<=12;i++){const r=2.49*(1-i/13),y=platedSurface(r,0)+offset;const points=[];for(let k=0;k<48;k++){const a=k/48*TAU;points.push(project(Math.cos(a)*r,y,Math.sin(a)*r));}rings.push({points,color:shade('#b4471b',.87+i*.013)});}
+  // 一つの描画単位にまとめ、山の層同士の深度ソートによる反転を防ぐ。
+  renderList.push({layer:renderLayer,d:0,run(){ctx.save();for(const ring of rings){ctx.beginPath();ring.points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fillStyle=ring.color;ctx.fill();ctx.strokeStyle=ring.color;ctx.lineWidth=.75;ctx.stroke();}ctx.restore();}});
+  const layer=renderLayer;renderLayer=3;
+  for(let i=0;i<10;i++){const a=i*2.39996,r=.4+(i%4)*.43,x=Math.cos(a)*r,z=Math.sin(a)*r,y=platedSurface(x,z)+offset+.009;line3([x,y,z],[x+.10,y+.002,z-.035],i%2?'#dc8a45':'#edb268',.015+glaze*.015);}
+  renderLayer=layer;return;
+ }
+ const v=viscosity,base=1.09+offset,speed=1.9*(1-v)+.27*v;
+ disk(0,base,0,2.49,v>.5?'#ac3c16':'#a73816');
+ // 波は一括した少数のポリゴン。粘度が上がるほど丸く厚く、ゆっくり動く。
+ for(let j=0;j<6;j++){
+  const a=j*2.39996,rr=.45+(j%4)*.47,x=Math.cos(a)*rr,z=Math.sin(a)*rr;
+  const pulse=Math.sin(t*speed+j*1.7),radius=.14+(1-v)*.08+v*.22;
+  const pts=[];for(let k=0;k<12;k++){const q=k/12*TAU,r=radius*(1+.09*Math.sin(q*3+t*speed+j));pts.push([x+Math.cos(q)*r,base+.007+v*.035+Math.sin(q+t*speed)*v*.014,z+Math.sin(q)*r*.65]);}
+  poly3(pts,j%3===0?(v>.45?'#be4d1b':'#c25620'):(v>.45?'#b64117':'#b94b1b'));
+  // 粘りのある曲面を細い三日月型のハイライトで表現。
+  if(v>.08){let prev=null;for(let k=0;k<=7;k++){const q=-2.8+k/7*1.8,point=[x+Math.cos(q)*radius*.82,base+.05+v*.016,z+Math.sin(q)*radius*.49];if(prev)line3(prev,point,j%2?'#df843c':'#edab61',.009+v*.023+glaze*.012);prev=point;}}
+  if(v<.8){const ring=.13+(Math.sin(t*2.6+j)+1)*.07;for(let k=0;k<5;k++){let q=k/5*Math.PI,qq=(k+1)/5*Math.PI;line3([x+Math.cos(q)*ring,base+.012,z+Math.sin(q)*ring*.55],[x+Math.cos(qq)*ring,base+.012,z+Math.sin(qq)*ring*.55],'#ce6528',.009*(1-v));}}
+ }
+ // 小さく分離した油滴が、乳化で幅広い艶の膜へつながる。
+ for(let i=0;i<12;i++){let a=i*2.4,r=.4+(i%5)*.4;disk(Math.cos(a)*r,base+.008,Math.sin(a)*r,(.07+(i%3)*.025)*(1-v*.55),'#d76b23',10);}
+ if(v>.2||glaze>.25){const strength=clamp(v*.7+glaze*.3);line3([-1.7,base+.07,-.7],[-1.17,base+.075,-.93],'#f3bf7d',.018+strength*.05);line3([-.96,base+.075,-1.01],[-.52,base+.07,-1.08],'#e6a25a',.016+strength*.035);}
+ // おたまの後に残る溝は、サラサラなら即座に消え、とろみがあるとゆっくり閉じる。
+ if(stage===4&&v>.15&&drag?.tool==='ladle'){
+  const path=drag.path.slice(-16),count=path.length;
+  for(let i=1;i<count;i++){const a=path[i-1],b=path[i];if(Math.hypot(a.x,a.z)>2.18||Math.hypot(b.x,b.z)>2.18)continue;const width=v*.11*i/count;line3([a.x,base+.062,a.z],[b.x,base+.062,b.z],'#813016',width);line3([a.x+.04,base+.068,a.z],[b.x+.04,base+.068,b.z],'#d77d35',width*.35);}
+ }
+}
+// とろみが増すほど豆腐の上面・縁にあんが残る。固定形状でちらつきと粒子増加を防ぐ。
+function drawTofuCoating(p,y,index){
+ if(p.type!=='tofu'||viscosity<.04)return;
+ const v=clamp((viscosity-.04)/.8),c=center(p.poly),a=area(p.poly);
+ if(a<.004)return;
+ const previousLayer=renderLayer;
+ // 豆腐と同じ深度ソート層に置き、他の豆腐を透かして描かない。
+ const top=y+p.h+.006,scale=.2+v*.73;
+ const vertices=p.poly.map((q,j)=>{const f=scale*(.84+.1*Math.sin(j*2.4+index));return [c.x+(q.x-c.x)*f,top,c.z+(q.z-c.z)*f];});
+ poly3(vertices,`rgba(177,65,22,${.2+v*.68})`);
+ // 白い豆腐を部分的に残しつつ、縁から垂れる厚いあんを表示。
+ if(v>.18&&a>.025){
+  for(let j=0;j<p.poly.length;j++){
+   if((j+index)%2)continue;
+   const q=p.poly[j],r=p.poly[(j+1)%p.poly.length],u=.28,w=.24+v*.22;
+   const ax=q.x+(r.x-q.x)*u,az=q.z+(r.z-q.z)*u,bx=q.x+(r.x-q.x)*(u+w),bz=q.z+(r.z-q.z)*(u+w);
+   const drop=p.h*(.18+v*.65),push=.004;
+   poly3([[ax+(ax-c.x)*push,top,az+(az-c.z)*push],[bx+(bx-c.x)*push,top,bz+(bz-c.z)*push],[(ax+bx)/2+((ax+bx)/2-c.x)*push,top-drop,(az+bz)/2+((az+bz)/2-c.z)*push]],'#b14b1d');
+  }
+ }
+ if(a>.035&&v>.15){
+  const b=bounds(p.poly),xx=c.x-b.w*.13,zz=c.z-b.d*.12;
+  line3([xx,top+.006,zz],[xx+b.w*(.12+v*.15),top+.006,zz-b.d*.035],'#f3bc78',.008+v*.018+glaze*.012);
+ }
+ renderLayer=previousLayer;
+}
+function drawFood(){worldOffset=stage>=5?{x:0,y:-.43,z:0}:{x:pan.x,y:0,z:pan.z};renderLayer=2;let offset=stage>=5?0:pan.y;if(stage>=3||(stage===2&&brothAdded))drawSoup(offset);
+if(stage===2)drawSeasoningFilms(offset);
+renderLayer=3;
+for(let meatIndex=0;meatIndex<meat.length;meatIndex++){const m=meat[meatIndex];if(stage>=5&&m.out)continue;
+// 生肉からキツネ色へ連続的に変化。黒ずみは焦げ60%を超えてからのみ進行。
+const browning=clamp(cook/.75),charAmount=clamp((burn-.6)/.4);
+// 密着した肉粒の下に圧縮ブロックを描き、撹拌に応じて小さく崩す。
+if(stage===2&&meatIndex===0&&meatLoosen<.8){const size=1-meatLoosen/.8;extrude(rect(0,0,1.78*size,1.4*size),.5,.18,cook<.25?'#d96e70':cookedBlockColor());}
+function cookedBlockColor(){return shade('#b97b50',1-charAmount*.94);}
+const raw=parseInt(m.color.slice(1),16),gold=m.sauce?0xb34320:0xb97b50;
+const channels=[16,8,0].map(shift=>Math.round(((raw>>shift)&255)*(1-browning)+((gold>>shift)&255)*browning));
+const cookedColor='#'+channels.map(v=>v.toString(16).padStart(2,'0')).join('');
+const c=stage===2?shade(cookedColor,1-charAmount*.94):shade(m.sauce?'#b34320':'#97542d',1-charAmount*.94);
+drawMinceOrPaste(m,(stage>=5?platedSurface(m.x,m.z)+m.r*.12:m.y)+offset,c,meatIndex);}
+if(stage===2&&cutIngredientsAdded){drawHerbBatch(stirHerbs,true,offset);}
+const fineHerbs=recipe.filter(p=>isHerb(p.type)&&area(p.poly)<.15);
+drawHerbBatch(fineHerbs,false,offset);
+for(let i=0;i<recipe.length;i++){const p=recipe[i];if(isHerb(p.type)&&area(p.poly)<.15)continue;let c=center(p.poly),a=area(p.poly);
+ // 盛り付け時は厚みの約72%をあんに沈め、白い豆腐だけが浮く段差をなくす。
+ const y=(stage>=5?platedSurface(c.x,c.z)-p.h*.72:p.y)+offset;
+ if(stage<5&&a>.09&&recipe.length<300)disk(c.x,1.11+offset,c.z,Math.sqrt(a)*.6,'#642c1a',8);
+ foodModel(p,y,recipe.length<120||a>.3);drawTofuCoating(p,y,i);
+}
+for(const c of clumps)ball(c.x,(stage>=5?platedSurface(c.x,c.z)+.02:1.23)+offset,c.z,c.r,'#f7e9cc');
+for(let i=0;i<garnish.length;i++){const g=garnish[i];if(garnish.length>450&&i%2){ball(g.x,(stage>=5?platedSurface(g.x,g.z)+.10+Math.min(.18,Math.max(0,g.y-1.25)):g.y)+offset,g.z,g.r,topDefs.find(d=>d[0]===g.type)?.[2]||'#689447',.55);}else toppingModel(g.type,g.x,(stage>=5?platedSurface(g.x,g.z)+.10+Math.min(.18,Math.max(0,g.y-1.25)):g.y)+offset,g.z,g.r,g.angle);}worldOffset={x:0,y:0,z:0};renderLayer=5;}
+function positionHeatDial(){if(stage<2||stage>4)return;/* コンロ側の定位置を使い、鍋の変位は参照しない。 */const p=project(3.55,1.2,0);const box=$('controls'),w=box.offsetWidth||128,h=box.offsetHeight||180;const minTop=$('buttons').getBoundingClientRect().bottom+10;box.style.left=clamp(p[0],8,Math.max(8,W-w-8))+'px';box.style.right='auto';box.style.top=clamp(p[1]-h/2,minTop,Math.max(minTop,H-h-85))+'px';}
+let dialLayoutClock=0;
+function draw(){camera();if(t>=dialLayoutClock){positionHeatDial();dialLayoutClock=t+.1;}ctx.fillStyle='#171210';ctx.fillRect(0,0,W,H);let bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#332821');bg.addColorStop(1,'#120f0e');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);renderList=[];renderLayer=0;worldOffset={x:0,y:0,z:0};
+extrude(rect(0,0,19,12),-.5,.3,'#3d342b');for(let i=-5;i<6;i++)line3([i*1.7,-.195,-6],[i*1.7,-.195,6],'#29241f',.018);
+renderLayer=1;
+if(stage===0){ingredients.forEach(([id,name,color],i)=>{let {x,z}=ingredientPosition(i);renderLayer=1;extrude(rect(x,z,2.3,2),.05,.16,selected.has(id)?'#b16c32':'#65503a');renderLayer=2;if(id==='ginger'||id==='garlic'){const count=id==='ginger'?2:5;for(let j=0;j<count;j++){const p=piece(ellipsePoly(x+(j-(count-1)/2)*.32,z,.24,id==='ginger'?.58:.36,12),.1,id,color);foodModel(p,.27);}}else if(['negi','nira','sprout','shimeji'].includes(id)){let count=id==='sprout'?9:id==='shimeji'?4:6;for(let j=0;j<count;j++){let xx=x+(j-(count-1)/2)*(id==='shimeji'?.32:.15),p=piece(rect(xx,z,id==='shimeji'?.27:id==='sprout'?.1:.13,(['negi','nira'].includes(id)?2.15:1.4)),id==='shimeji'?.28:.15,id,color);foodModel(p,.27);}}else{let p=piece(id==='eggplant'?ellipsePoly(x,z,.64,.93):rect(x,z,1.3,1.05),.5,id,color);foodModel(p,.26);}label(x,.3,z+1.12,name+' ×'+portions[id]);});}
+if(stage===1){renderLayer=1;extrude(rect(0,0,8.5,6.2),0,.28,'#ad7b48');renderLayer=2;const chopped=pieces.filter(p=>p.type===current()&&isHerb(p.type)&&area(p.poly)<.15);drawHerbBatch(chopped,true);for(const p of pieces){if(p.type!==current()||(isHerb(p.type)&&area(p.poly)<.15))continue;let c=center(p.poly),a=area(p.poly);if(a>.08)disk(c.x,.285,c.z,Math.sqrt(a)*.7,'#81552f',8);foodModel(p,p.y,pieces.length<140||a>.3);}renderLayer=5;let a=knife.angle,c=Math.cos(a),s=Math.sin(a),x=knife.x,z=knife.z,y=drag?.tool==='knife'?.75:1.55;let verts=[[-.75,0],[.75,0],[.75,.8],[-.75,.8]].map(([u,v])=>[x+c*u,y+v,z+s*u]);poly3(verts,'#cdd4d7','#f6ffff');line3([x-c*.8,y,z-s*.8],[x+c*.8,y,z+s*.8],'#ffffff',.025);line3([x+c*.8,y+.5,z+s*.8],[x+c*1.6,y+.5,z+s*1.6],'#322218',.2);label(-2.7,.3,2.85,names[current()]+' · 一品ずつ仕込み');}
+if(stage>=2&&stage<=4){extrude(rect(0,0,6.7,6),-.05,.35,'#22282a');disk(0,.33,0,2.1,'#0f0e0d');renderLayer=.5;
+// 鍋の投影領域を炎の描画から除外する（底面からの透け防止）。
+// 俯瞰では炎を描画しない。火力はダイヤルで確認する。
+if(false){const outline=Array.from({length:64},(_,i)=>{const a=i/64*TAU;return project(pan.x+Math.cos(a)*2.86,1.7+pan.y,pan.z+Math.sin(a)*2.86);});renderList.push({layer:.5,d:0,run(){ctx.save();ctx.beginPath();ctx.rect(0,0,W,H);outline.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.clip('evenodd');for(let i=0;i<20;i++){const a=i/20*TAU,p=project(Math.cos(a)*1.7,.47,Math.sin(a)*1.7),r=(.08+heat*.08)*focal/p[2];ctx.fillStyle='#589eff';ctx.beginPath();ctx.ellipse(p[0],p[1],r,r*(1+heat),0,0,TAU);ctx.fill();}ctx.restore();}});}// 炒め工程は底面を明示し、壁を細分化して食材と同じ深度順で描く。
+// 鍋の内側は閉じた輪郭を一括描画する。多数の四角形の
+// 深度ソートによる底抜け・継ぎ目を避け、数百面の処理も削減。
+renderLayer=1;
+const wokOutline=[];
+for(let i=0;i<64;i++){
+ const a=i/64*TAU;
+ wokOutline.push(project(pan.x+Math.cos(a)*2.86,1.7+pan.y,pan.z+Math.sin(a)*2.86));
+}
+const basinCenter=project(pan.x,.49+pan.y,pan.z);
+renderList.push({layer:1,d:basinCenter[2],run(){
+ ctx.save();ctx.beginPath();
+ wokOutline.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
+ ctx.closePath();
+ const xs=wokOutline.map(p=>p[0]),ys=wokOutline.map(p=>p[1]);
+ const radius=Math.max(1,(Math.max(...xs)-Math.min(...xs))*.64);
+ const g=ctx.createRadialGradient(basinCenter[0],basinCenter[1],0,basinCenter[0],basinCenter[1],radius);
+ g.addColorStop(0,'#515a60');g.addColorStop(.48,'#424a50');g.addColorStop(.85,'#272e34');g.addColorStop(1,'#151b20');
+ ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='#919b9f';ctx.lineWidth=3;ctx.lineJoin='round';ctx.stroke();ctx.restore();
+}});
+// 手前の縁だけ中身より後に描き、深さを残す。底面は常に中身の背面。
+const frontRim=[];
+for(let i=0;i<=32;i++){const a=i/32*Math.PI;frontRim.push(project(pan.x+Math.cos(a)*2.86,1.7+pan.y,pan.z+Math.sin(a)*2.86));}
+// 内壁の前景帯は描画しない。閉じた底面は残し、俯瞰時に鍋全体を見渡せるようにする。
+// 縁の細い輪郭だけを残し、底面・スープ・具材を面で覆わない。
+renderList.push({layer:4,d:0,run(){ctx.save();ctx.beginPath();frontRim.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.strokeStyle='#a4adb0';ctx.lineWidth=3;ctx.lineCap='round';ctx.stroke();ctx.restore();}});
+renderLayer=5;
+// 奥側の補助取っ手と、調理人側へ伸びる木柄。
+for(let i=0;i<14;i++){let a=i/14*Math.PI,b=(i+1)/14*Math.PI;line3([pan.x+Math.cos(a)*.53,1.72+pan.y,pan.z-2.75-Math.sin(a)*.55],[pan.x+Math.cos(b)*.53,1.72+pan.y,pan.z-2.75-Math.sin(b)*.55],'#707a7f',.11);}line3([pan.x,1.65+pan.y,2.65+pan.z],[pan.x,1.65+pan.y,3.1+pan.z],'#b7b8b1',.2);line3([pan.x,1.65+pan.y,3.1+pan.z],[pan.x,1.85+pan.y,5.1+pan.z],'#63402b',.3);drawFood();
+// 手前の鍋壁を食材より後に描き、鍋底との前後関係を安定させる。
+renderLayer=4;for(let i=0;i<0;i++){let a=i/64*TAU,b=(i+1)/64*TAU;poly3([[Math.cos(a)*2.86+pan.x,1.7+pan.y,Math.sin(a)*2.86+pan.z],[Math.cos(b)*2.86+pan.x,1.7+pan.y,Math.sin(b)*2.86+pan.z],[Math.cos(b)*1.35+pan.x,.55+pan.y,Math.sin(b)*1.35+pan.z],[Math.cos(a)*1.35+pan.x,.55+pan.y,Math.sin(a)*1.35+pan.z]],'#34383a');line3([Math.cos(a)*2.86+pan.x,1.7+pan.y,Math.sin(a)*2.86+pan.z],[Math.cos(b)*2.86+pan.x,1.7+pan.y,Math.sin(b)*2.86+pan.z],'#a7a9a7',.055);}renderLayer=5;
+if(stage===2)drawIngredientContainer();
+if(stage===2&&tool==='douban'){let x=drag?.tool==='douban'?drag.p.x:-3.6,z=drag?.tool==='douban'?drag.p.z:.5;ball(x,2.65,z,.5,'#a7c5c9',.5);disk(x,2.84,z,.42,'#a92513',24);for(let i=0;i<16;i++){let a=i*2.4,r=.32*Math.sqrt((i+.5)/16),xx=x+Math.cos(a)*r,zz=z+Math.sin(a)*r;ball(xx,2.865,zz,.055,i%3?'#c54220':'#e16b29',.55);if(i%4===0)ball(xx+.018,2.89,zz,.014,'#e7bd73',.55);}line3([x-.23,2.9,z-.15],[x-.05,2.9,z-.23],'#ed8d42',.025);label(x,3.3,z,'豆板醤：鍋の上で押して投入');}
+if(stage===2||stage===3||stage===4){ball(ladle.x,1.5,ladle.z,.32,'#bdc6cb',.45);line3([ladle.x,1.5,ladle.z],[ladle.x+.4,2.3,ladle.z+2],'#c0c7cc',.1);}if(stage===4){let x=drag?.tool==='bowl'?bowl.x:-3.5,z=drag?.tool==='bowl'?bowl.z:1;disk(x,2.75,z,.46,'#e4eee9');ball(x,2.6,z,.5,'#a2c2c7',.43);disk(x,2.78,z,.38,'#fff6df');}if(stage===5){let x=drag?drag.p.x:-3.5,z=drag?drag.p.z:1;toppingContainer(tool,x,2.6,z);label(x,3.85,z,topDefs.find(x=>x[0]===tool)?.[1]||'トッピング');}}
+if(stage>=5){chinesePlate();drawFood();}
+if(stage===5){renderLayer=5;const x=drag?drag.p.x:-3.5,z=drag?drag.p.z:1;toppingContainer(tool,x,2.6,z);label(x,3.85,z,topDefs.find(d=>d[0]===tool)?.[1]||'トッピング');}
+if(stage===2||stage===4)drawPanGrip();
+renderLayer=6;
+for(const d of drops){if(d.type==='starch')ball(d.x,d.y,d.z,d.r,'#fff7e7');else toppingModel(d.type,d.x,d.y,d.z,d.r,(d.x+d.z)*3);}
+for(const s of steam){if(s.bubble)ball(s.x,s.y,s.z,s.r,'#efb066',.7);else{let p=project(s.x,s.y,s.z),r=s.r*focal/p[2];renderList.push({layer:renderLayer,d:p[2],run(){ctx.fillStyle=burn>.3&&stage===2?`rgba(111,103,96,${clamp(s.life/2)*.25})`:`rgba(255,239,214,${clamp(s.life/2)*.18})`;ctx.beginPath();ctx.ellipse(p[0],p[1],r,r*1.4,0,0,TAU);ctx.fill();}});}}
+renderList.sort((a,b)=>(a.layer-b.layer)||(b.d-a.d));for(const obj of renderList)obj.run();}
+function status(){let text='',q=0;$('meters').replaceChildren();if(stage===0){text='選択 '+selected.size+' / '+ingredients.length+'種類・合計 '+Object.values(portions).reduce((a,b)=>a+b,0)+'人前分\n豆腐の高さ '+tofuHeightCm.toFixed(1)+' cm\n豆腐の投入量：仕込んだ量をそのまま投入\n同じ具材を何度でも追加できます。\n＋で追加、−で1つ戻します。';q=selected.size/ingredients.length;}
+if(stage===1){let id=current(),def=ingredients.find(x=>x[0]===id),group=def?.[3]||'dice',n=cutRecords[id].strokes.length,ps=pieces.filter(p=>p.type===id);text=`${names[id]}　${prep+1}/${queue.length}品\n${group==='mince'?'往復して細かく：回数＋密集度':group==='loose'?'優しく3〜5回：やりすぎ注意':'目分量の格子切り：等間隔＋直角'}\nスワイプ ${n}回 / ${ps.length}片\n${id==='tofu'?'厚み：'+tofuHeightCm.toFixed(1)+'cm / 切った量をそのまま投入\n包丁：'+(knifeDirection==='vertical'?'縦 ↕':'横 ↔')+'（始点を通る直線）\n':''}${group==='dice'?'サイコロ精度 '+Math.round(strokeQuality(id)*50)+' / 50点':'仕込み精度 '+Math.round(strokeQuality(id)*100)+'%'}\n全体の包丁評価 ${Math.round(quality()*100)}%`;q=quality();}
+if(stage===2){text=`${aromaProgress<1?'① 香味野菜を油で炒める':cook<.9?'② 牛ひき肉50gをほぐして炒める':'③ 豆豉醤・しょうゆ・紹興酒を馴染ませる'}\n投入：油${saladOilAdded?'✓':'未'}・ひき肉${beefAdded?'✓':'未'}・香味野菜${cutIngredientsAdded?'✓':'未'}\n調味料：${seasoningDefs.filter(d=>d[0]==='douban'?doubanAmount>0:seasoningAmounts[d[0]]>0).map(d=>d[1]).join('・')||'未投入'}\n香味 ${Math.round(aromaProgress*100)}% / 調味 ${Math.round(seasoningProgress*100)}%\n炒まり ${Math.round(cook*100)}% / 醤の馴染み ${Math.round(mixed*100)}%\n鍋振り ${flips}回 / 焦げ ${Math.round(burn*100)}%\n豆板醤 小さじ${doubanAmount.toFixed(2)}（基準1）\n飛散ロス ${Math.round(lost*100)}% / ${elapsed.toFixed(1)}秒\n工程評価 ${Math.round(quality()*100)} / 100`;q=quality();}
+if(stage===3){text=`絹ごし豆腐230g / 厚み${tofuHeightCm.toFixed(1)}cm\n鶏ガラスープ160ml・砂糖ひとつまみ\n適温煮込み ${simmer.toFixed(1)}秒（目安5〜7秒）\nスープ残量 ${Math.round(soup*100)}%（目安76%）\n豆腐の崩壊 ${Math.round(damage*100)}%\n工程評価 ${Math.round(quality()*100)} / 100`;q=quality();}
+if(stage===4){text=`① 弱火・消火 ${lowFirst?'✓':'未達'}\n② 片栗粉 ${Math.round(starch/.58*100)}% / 基準：小さじ1＋水小さじ2\n回し入れ ${(pourCircle/TAU).toFixed(1)}周 / 撹拌 ${Math.round(mix*100)}%\n白いダマ ${clumps.length}個\n③ 強火鍋振り ${emulsify}回 / ツヤ ${Math.round(glaze*100)}%\nとろみ ${Math.round(viscosity*100)}% · ${viscosity<.25?'サラサラ':viscosity<.65?'とろみが出てきた':'ドロッと濃厚なあん'}\n工程評価 ${Math.round(quality()*100)} / 100`;q=quality();}
+if(stage===5){text='上部の皿ボタンでデザインを即時変更\nごま油：ふちに沿って円ドラッグ\n花椒：左右往復 / ラー油：タップ・なぞる\n青ネギ・パクチー：タップ\n糸唐辛子：ドラッグで中央へ\n仕上げは採点なし。好きな量でどうぞ。';for(const [id,name,,target]of topDefs){let row=document.createElement('div');row.className='meter';let span=document.createElement('span');span.textContent=name+' '+Math.round(topAmounts[id]*100);let bar=document.createElement('i');bar.style.width=Math.min(130,topAmounts[id]/target*65)+'px';bar.style.background='#efb46b';row.append(span,bar);$('meters').append(row);}q=quality();}
+if(stage===6){text='一品ずつ刻んだ、世界に一つだけの麻婆。\n360度の自動周回で仕上がりを鑑賞。';q=1;}$('stats').textContent=text;$('bar').style.width=clamp(q)*100+'%';}
+function finish(){drops=[];steam=[];let total=Math.round(scores.reduce((a,b)=>a+b,0)/Math.max(1,scores.length)),rank=total>=90?'特級':total>=75?'上級':total>=55?'中級':'見習い';let name='手仕込みの四川風麻婆豆腐';if(selected.has('cheese')&&topAmounts.sesame>.1)name='コクと香りが引き立つ！まろやかチーズ麻婆豆腐';if((selected.has('negi')||topAmounts.scallion>.6)&&topAmounts.pepper>.55)name='痺れる旨さ！山盛りネギの本格四川風麻婆豆腐';if(topAmounts.cilantro>.4)name='香草が踊る！パクチーたっぷり麻婆豆腐';if(selected.size===ingredients.length&&topDefs.every(x=>topAmounts[x[0]]>.015))name='全具材＆トッピング制覇！神の領域の特級麻婆豆腐';$('dishname').textContent=name;$('score').textContent=total+'点 · '+rank;let reviews=[total>=80?'香りと食感が調和した、見事な職人の一皿。':'切り方も火加減も、あなただけの味わいになりました。'];if(selected.has('eggplant'))reviews.push('なすが旨辛のあんを吸い込み、ジューシー。');if(selected.has('cheese'))reviews.push('チーズのコクが刺激をやさしく包みます。');if(selected.has('shimeji'))reviews.push('しめじの旨味が奥行きをプラス。');if(topAmounts.pepper>.65)reviews.push('花椒ドバ盛りの、痺れを愛する仕上がり！');if(topAmounts.scallion>.65)reviews.push('ネギだくの鮮やかな香りと食感。');if(topAmounts.chili>.65)reviews.push('ラー油たっぷり、燃えるような辛さ。');if(topAmounts.threads>.1)reviews.push('糸唐辛子が中央を華やかに彩ります。');if(burn>.25)reviews.push('次は焦げる前に撹拌と鍋振りを。');if(damage>.25)reviews.push('おたまをゆっくり滑らせると、豆腐をもっと美しく保てます。');if(clumps.length>6)reviews.push('片栗粉は弱火で回し入れ、すぐ優しく混ぜましょう。');if(glaze>.7)reviews.push('強火で乳化したツヤが食欲を誘います。');$('review').textContent=reviews.join(' ');$('detail').textContent=['包丁（サイコロ50点基準を正規化）','炒め・キツネ色と醤','煮込み・残量と豆腐保護','とろみ・手順と乳化'].map((s,i)=>s+'\n'+scores[i].toFixed(1)+' / 100').join('\n')+'\n\n総合：4工程の平均 / 100点\n仕上げトッピング：採点対象外（自由な盛り付け）';if(ac){let now=ac.currentTime;[0,4,7,12].forEach((v,i)=>note(261.6*2**(v/12),now+i*.12,.6,.07,'triangle',master));}}
+function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(devicePixelRatio||1,1);canvas.width=W*DPR;canvas.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);camera();}
+// 折り返した選択ボタンと情報パネルが重ならないよう追従。
+function positionSelectionInfo(){const buttons=$('buttons');const bottom=buttons.childElementCount?buttons.getBoundingClientRect().bottom:(W<650?58:70);document.documentElement.style.setProperty('--info-top',(bottom+12)+'px');}
+const selectionObserver=new ResizeObserver(positionSelectionInfo);selectionObserver.observe($('buttons'));
+window.addEventListener('resize',()=>{resize();positionSelectionInfo();});document.addEventListener('visibilitychange',()=>{last=performance.now();release();if(ac){if(document.hidden)ac.suspend();else if(audioOn)ac.resume();}});
+let uiClock=0;
+let lastPaint=0;
+function frame(now){
+ requestAnimationFrame(frame);
+ if(document.hidden){last=now;return;}
+ // 60fpsを目標に描画。物理30Hz・情報表示4Hzは独立して負荷を抑える。
+ // 実際のfpsは端末と食材数による。高リフレッシュ画面のみ過剰描画を抑制。
+ if(now-lastPaint<1000/60-1)return;
+ lastPaint=now;
+ const dt=Math.min(.05,Math.max(0,(now-(last||now))/1000));last=now;
+ t+=dt;update(dt);draw();uiClock+=dt;
+ if(uiClock>.25){status();uiClock=0;}
+}
+// 初期描画を即座に行う。初期化に失敗した場合は上の診断表示へ。
+resize();ui();status();draw();requestAnimationFrame(frame);
+</script></body></html>
