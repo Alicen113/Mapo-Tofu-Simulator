@@ -45,6 +45,23 @@
  #toast{top:40%;font-size:12px;z-index:20;max-width:90vw}
 }
 @media(max-width:700px) and (max-height:500px){header h1{width:auto;font-size:12px}#buttons,#buttons:has(.stir-group){max-height:19dvh}#info{max-height:13dvh}#heatdial{width:38px;height:38px}#dialneedle{transform-origin:2px 15px;height:11px}#next{padding:8px}header.panel{padding:3px 6px}}
+/* スマホ：説明・採点は上部に全文表示。画面全体を縦スクロールし、調理領域の縮小を防ぐ。 */
+@media(max-width:700px){
+ html{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto}
+ body{height:auto;min-height:100dvh;overflow:visible;grid-template-rows:auto auto auto minmax(320px,54svh) auto;align-content:start;gap:7px;overscroll-behavior-y:auto;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+ header.panel{grid-row:1}
+ #info{grid-row:2;max-height:none;height:auto;overflow:visible;touch-action:auto;padding:10px 12px}
+ #info h2{font-size:14px;margin-bottom:5px}
+ #info p{font-size:12px;line-height:1.65;margin:5px 0;overflow-wrap:anywhere}
+ #stats{font-size:12px;line-height:1.75;overflow-wrap:anywhere}
+ #meters{font-size:11px}
+ #buttons,#buttons:has(.stir-group){grid-row:3;max-height:none;overflow:visible;touch-action:auto}
+ #view{grid-row:4;min-height:320px;height:100%;width:100%;touch-action:none}
+ #bottom{grid-row:5}
+ #result{grid-row:2;max-height:none;height:auto;overflow:visible;touch-action:auto}
+ body[data-stage="6"]{grid-template-rows:auto auto auto minmax(320px,54svh) auto}
+ #toast{position:fixed}
+}
 </style></head><body>
 <canvas id="view" aria-label="麻婆豆腐の調理場"></canvas>
 <header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
@@ -342,7 +359,7 @@ function containFood(p){
  if(p.y<support){p.y=support;p.vy=0;}
 }
 const sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=a=>{let n=Math.hypot(...a);return a.map(v=>v/n);};
-function camera(){let mobile=innerWidth<=700;if(stage===6){eye=[Math.sin(orbit)*10,8.5,Math.cos(orbit)*10];}else if(stage===1){eye=[0,mobile?15:13,.65];}else if(stage>=2&&stage<=5){eye=[0,mobile?16:14,3.6];}else eye=[0,9.2,mobile?12.8:11.5];let target=[0,stage===1?.25:1,0];forward=norm(sub(target,eye));right=norm(cross(forward,[0,1,0]));up=cross(right,forward);focal=Math.min(W*.95,H*1.15);if(mobile)focal=Math.min(W*1.18,H*(stage>=2&&stage<=4?1.35:1.55));}
+function camera(){let mobile=innerWidth<=700;if(stage===6){eye=[Math.sin(orbit)*10,8.5,Math.cos(orbit)*10];}else if(stage===1){eye=[0,mobile?15:13,.65];}else if(stage>=2&&stage<=5){eye=[0,mobile?16:14,3.6];}else eye=[0,9.2,mobile?12.8:11.5];let target=[0,stage===1?.25:1,0];forward=norm(sub(target,eye));right=norm(cross(forward,[0,1,0]));up=cross(right,forward);focal=Math.min(W*.95,H*1.15);if(mobile)focal=Math.min(W*1.32,H*(stage>=2&&stage<=4?1.5:1.72));}
 function viewCenterY(){return H*(innerWidth<=700?.5:.57);}
 function project(x,y,z){if(modelRotation){const xx=x;x=-z;z=xx;}const vx=x+worldOffset.x-eye[0],vy=y+worldOffset.y-eye[1],vz=z+worldOffset.z-eye[2],depth=Math.max(.05,vx*forward[0]+vy*forward[1]+vz*forward[2]),scale=focal/depth;return [W*.5+(vx*right[0]+vy*right[1]+vz*right[2])*scale,viewCenterY()-(vx*up[0]+vy*up[1]+vz*up[2])*scale,depth];}
 function ground(e,y=.3){let rect=canvas.getBoundingClientRect(),sx=(e.clientX-rect.left-W*.5)/focal,sy=-(e.clientY-rect.top-viewCenterY())/focal;let ray=forward.map((v,i)=>v+right[i]*sx+up[i]*sy),k=(y-eye[1])/ray[1];return {x:eye[0]+ray[0]*k,z:eye[2]+ray[2]*k};}
