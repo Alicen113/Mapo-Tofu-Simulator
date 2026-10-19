@@ -190,13 +190,18 @@ body[data-stage="2"] #view,body[data-stage="3"] #view,body[data-stage="4"] #view
  #mobileScore{max-height:20dvh}
  #buttons,#buttons:has(.stir-group){max-height:17dvh}
 }
+/* PCの火力操作は調理キャンバス内の右下へ。スマホは右側の専用領域を維持。 */
+@media(min-width:701px){
+ body[data-stage="2"] #view,body[data-stage="3"] #view,body[data-stage="4"] #view{width:100vw}
+ #bottom #controls{width:128px;max-width:128px;z-index:12}
+}
 </style></head><body>
 <canvas id="view" aria-label="麻婆豆腐の調理場"></canvas>
 <header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="fullscreen" type="button" title="対応ブラウザで全画面表示">⛶ 全画面</button><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
 <section id="mobileScore" class="panel" aria-label="採点項目と採点基準"><div class="score-heading"><span>採点項目・基準</span><strong id="mobileScoreValue">—</strong></div><div id="scoreCriteria"></div></section>
 <section id="info" class="panel"><h2 id="title"></h2><button id="helpToggle" type="button" aria-controls="help" aria-expanded="false">説明を表示</button><p id="help" hidden></p><div id="stats"></div><div id="meters"></div><div id="progress"><div id="bar"></div></div></section>
 <div id="buttons" aria-label="具材と調理道具の選択"></div>
-<div id="bottom"><div id="controls" class="panel"><div id="heatrow"><label id="heatlabel" for="heat">火加減</label><input id="heat" type="range" min="0" max="100" value="0" tabindex="-1" aria-hidden="true"><button id="heatdial" type="button" role="slider" aria-labelledby="heatlabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="ダイヤルを回す／上下にドラッグ。矢印キーでも調整できます"><span id="dialneedle"></span></button><div id="diallabels">消火 · 弱 · 中 · 強</div><span id="heattext"></span><div id="mobileHeatButtons" role="group" aria-label="火加減"><button type="button" data-heat="0">消火</button><button type="button" data-heat="20">弱火</button><button type="button" data-heat="50">中火</button><button type="button" data-heat="90">強火</button></div><button id="off">消火</button></div></div><button id="next">仕込み開始 →</button></div>
+<div id="bottom"><div id="controls" class="panel"><div id="heatrow"><label id="heatlabel" for="heat">火加減</label><input id="heat" type="range" min="0" max="100" value="0" tabindex="-1" aria-hidden="true"><button id="heatdial" type="button" role="slider" aria-labelledby="heatlabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="ダイヤルを回す／上下にドラッグ。矢印キーでも調整できます"><span id="dialneedle"></span></button><div id="diallabels">消火 · 弱 · 中 · 強</div><span id="heattext"></span><div id="mobileHeatButtons" role="group" aria-label="火加減"><button type="button" data-heat="90">強火</button><button type="button" data-heat="50">中火</button><button type="button" data-heat="20">弱火</button><button type="button" data-heat="0">消火</button></div><button id="off">消火</button></div></div><button id="next">仕込み開始 →</button></div>
 <div id="toast" role="status"></div>
 <section id="result" class="panel"><h2 id="dishname"></h2><div id="score"></div><p id="review"></p><div id="detail"></div><button id="restart">もう一度つくる</button></section>
 
@@ -335,7 +340,7 @@ let meatLoosen=0;
 let cook=0,burn=0,flips=0,mixed=0,lost=0,agitation=0,simmer=0,soup=1,damage=0,gentle=0,starch=0,mix=0,glaze=0,lowFirst=false,starchStep=0,pourCircle=0,pourBad=0,lastMix=0,lastFlip=-1,emulsify=0;
 let topAmounts=Object.fromEntries(topDefs.map(x=>[x[0],0])),chosenTops=new Set(),topCircle=0,orbit=0,lastSfx=0,emitClock=0;
 const titles=['0 / 自由な具材セレクト','1 / 直感！包丁さばき','2 / 醤とひき肉のリアル炒め','3 / スープと豆腐のリアル煮込み','4 / 究極のとろみ付け','5 / 魂の仕上げ','完成 / あなたの一皿'];
-const helps=['1〜2人分：絹ごし豆腐230g、牛ひき肉50g。香味野菜は未選択から開始します。長ネギは太め8cmが基準です。ニラは追加アレンジです。しょうが薄切り2枚・にんにく4〜5枚分も選択して、長ネギと同じ自由切りで刻めます。','豆腐は厚み1cmの直線切り。長ネギ・ニラ・しょうが・にんにくは自由にみじん切り。微細な破片は軽量な専用描画で表現し、刻みの細かさも評価します。','サラダ油大さじ1〜2で香味野菜を弱火で炒め、牛ひき肉50gをほぐします。上の「サラダ油」→「香味野菜」→「ひき肉」で手動投入。肉に火が通ったら調味料の選択欄から豆豉醤・しょうゆ・紹興酒などを選んで個別に投入。スープ・砂糖を入れ忘れた場合は煮込み開始時に補います。豆板醤は手動で基準小さじ1を目安に。','鶏ガラスープ160mlと砂糖ひとつまみを加え、絹ごし豆腐と仕込んだ具材を煮ます。中弱火で5〜7秒、優しく混ぜてください。実際の調理時間を短縮したゲーム表現です。','片栗粉小さじ1を倍量の水で溶いたものを基準量として投入。①弱火・消火 ②回し入れて混ぜる ③強火で鍋振りしてツヤを出す。','ごま油・ラー油は各大さじ1弱を目安に。万能ねぎ・花椒はお好みで。追加の香草も自由、仕上げは採点しません。','作った具材を中華皿に盛り付け。360度ゆっくり鑑賞できます。'];
+const helps=['1〜2人分：絹ごし豆腐230g、牛ひき肉50g。香味野菜は未選択から開始します。長ネギは太め8cmが基準です。ニラは追加アレンジです。しょうが薄切り2枚・にんにく4〜5枚分も選択して、長ネギと同じ自由切りで刻めます。','豆腐は厚み1cmの直線切り。長ネギ・ニラ・しょうが・にんにくは自由にみじん切り。微細な破片は軽量な専用描画で表現し、刻みの細かさも評価します。','サラダ油大さじ1〜2で香味野菜を弱火で炒め、牛ひき肉50gをほぐします。上の「サラダ油」→「香味野菜」→「ひき肉」で手動投入。肉に火が通ったら調味料の選択欄から豆豉醤・しょうゆ・紹興酒などを選んで個別に投入。スープ・砂糖を入れ忘れた場合は煮込み開始時に補います。豆板醤は手動で基準小さじ1を目安に。採点は炒まり・撹拌・鍋振り・調味の進捗で加点し、焦げと飛散ロスの累積量だけ減点します。経過時間そのものでは減点しません。','鶏ガラスープ160mlと砂糖ひとつまみを加え、絹ごし豆腐と仕込んだ具材を煮ます。中弱火で5〜7秒、優しく混ぜてください。実際の調理時間を短縮したゲーム表現です。','片栗粉小さじ1を倍量の水で溶いたものを基準量として投入。①弱火・消火 ②回し入れて混ぜる ③強火で鍋振りしてツヤを出す。','ごま油・ラー油は各大さじ1弱を目安に。万能ねぎ・花椒はお好みで。追加の香草も自由、仕上げは採点しません。','作った具材を中華皿に盛り付け。360度ゆっくり鑑賞できます。'];
 // Web Audio：五音音階の撥弦＋笛＋打楽器。自作ノイズによる料理SE。
 let audioOn=true,ac=null,master=null,music=null,noiseBuf=null,hiss=null,hissGain=null,musicTimer=null,noteIndex=0;
 function note(freq,start,duration,volume,type='sine',dest=music){if(!ac||!audioOn)return;const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(freq,start);g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),start+.014);g.gain.exponentialRampToValueAtTime(.0001,start+duration);o.connect(g);g.connect(dest||master);o.start(start);o.stop(start+duration+.02);}
@@ -670,12 +675,14 @@ function physics(dt){let active=pieces.filter(p=>p.type===current());if(!active.
 // 薬味は軽く跳ねて滑るが、密集時の断片同士の全衝突は省略する。
 if(isHerb(current())&&active.length>100)continue;
 let grid=new Map();for(let i=0;i<active.length;i++){let p=active[i],c=center(p.poly),bb=bounds(p.poly);for(let x=Math.floor((c.x-bb.w/2)/.6);x<=Math.floor((c.x+bb.w/2)/.6);x++)for(let z=Math.floor((c.z-bb.d/2)/.6);z<=Math.floor((c.z+bb.d/2)/.6);z++){let k=x+','+z;if(!grid.has(k))grid.set(k,[]);grid.get(k).push(i);}}let tested=new Set(),checks=0;collisionPairs:for(const bucket of grid.values())for(let a=0;a<bucket.length;a++)for(let b=a+1;b<bucket.length;b++){if(++checks>(active.length>250?1800:3500))break collisionPairs;let i=bucket[a],j=bucket[b],key=Math.min(i,j)*active.length+Math.max(i,j);if(tested.has(key))continue;tested.add(key);let p=active[i],q=active[j];if(Math.abs(p.y-q.y)>(p.h+q.h)*.5)continue;let pc=center(p.poly),qc=center(q.poly),pb=bounds(p.poly),qb=bounds(q.poly),ox=(pb.w+qb.w)/2-Math.abs(pc.x-qc.x),oz=(pb.d+qb.d)/2-Math.abs(pc.z-qc.z);if(ox<=0||oz<=0)continue;let axis=ox<oz?'x':'z',dep=Math.min(ox,oz);if(dep>.16)continue;let s=qc[axis]>=pc[axis]?1:-1,ip=1/Math.max(.004,area(p.poly)*p.h),iq=1/Math.max(.004,area(q.poly)*q.h),sum=ip+iq;let corr=(dep+.0002)*.65;movePiece(p,axis==='x'?-s*corr*ip/sum:0,axis==='z'?-s*corr*ip/sum:0);movePiece(q,axis==='x'?s*corr*iq/sum:0,axis==='z'?s*corr*iq/sum:0);let v=axis==='x'?'vx':'vz',rel=(q[v]-p[v])*s;if(rel<0){let impulse=-1.15*rel/sum;p[v]-=s*impulse*ip;q[v]+=s*impulse*iq;}}}}
+// およそ0.16ワールド単位以下の断片を十分細かいと評価。全薬味とUIで共通化。
+function herbFineness(ps){return ps.reduce((sum,p)=>sum+clamp((.6-Math.sqrt(area(p.poly)))/.44),0)/Math.max(1,ps.length);}
 function strokeQuality(id){let rec=cutRecords[id],ps=pieces.filter(p=>p.type===id),group=ingredients.find(x=>x[0]===id)?.[3]||'dice',ss=rec.strokes,n=ss.length;if(!n)return 0;
 if(group==='loose'){let count=n>=3&&n<=5?1:n<3?n/3:clamp(1-(n-5)*.18);let softness=ss.reduce((s,r)=>s+clamp(1-(r.speed-2)/7),0)/n;return clamp(count*.75+softness*.25);}
-if(group==='mince'){let fine=ps.reduce((s,p)=>s+clamp(1-Math.sqrt(area(p.poly))/.3),0)/Math.max(1,ps.length);let density=ss.reduce((s,r)=>s+Math.exp(-(Math.hypot(r.mx,r.mz)**2)/5),0)/n;return clamp(Math.max(fine,clamp((rec.micro||0)/30))*.65+clamp(n/14)*.2+density*.15);}
+if(group==='mince'){let fine=herbFineness(ps);let density=ss.reduce((s,r)=>s+Math.exp(-(Math.hypot(r.mx,r.mz)**2)/12),0)/n;return clamp(Math.max(fine,clamp((rec.micro||0)/18))*.65+clamp(n/8)*.2+density*.15);}
 let vertical=[],horizontal=[];for(const r of ss){let a=Math.abs(Math.sin(r.angle));if(a>.8)vertical.push(r.mx);if(a<.6)horizontal.push(r.mz);}function spacing(v){v.sort((a,b)=>a-b);let unique=v.filter((x,i)=>!i||x-v[i-1]>.06);let gaps=unique.slice(1).map((x,i)=>x-unique[i]);if(gaps.length<2)return 0;let mean=gaps.reduce((a,b)=>a+b,0)/gaps.length,sd=Math.sqrt(gaps.reduce((s,x)=>s+(x-mean)**2,0)/gaps.length);return clamp(1-sd/Math.max(.01,mean));}
 let orth=ss.reduce((s,r)=>s+Math.abs(Math.cos(2*r.angle)),0)/n;let shape=ps.reduce((s,p)=>{let b=bounds(p.poly);return s+Math.min(b.w,b.d)/Math.max(b.w,b.d);},0)/Math.max(1,ps.length);return clamp((spacing(vertical)+spacing(horizontal))*.3+orth*.18+shape*.22)*clamp(Math.min(vertical.length,horizontal.length)/3);}
-function quality(){if(stage===1)return queue.reduce((s,id)=>s+strokeQuality(id),0)/queue.length;if(stage===2)return clamp(cook*.35+mixed*.27+clamp(flips/5)*.15+(1-burn)*.13+(1-lost)*.1-burn*.65-lost*.4-Math.max(0,elapsed-22)*.012);if(stage===3){let timeFit=clamp(1-Math.abs(simmer-6)/6),vol=clamp(1-Math.abs(soup-.76)/.38);return clamp(timeFit*.38+vol*.32+clamp(gentle/2)*.3-damage*1.05-burn*.2);}if(stage===4)return clamp((lowFirst?.18:0)+clamp(1-Math.abs(starch-.58)/.58)*.2+mix*.22+glaze*.4-clumps.length*.022-pourBad*.08);if(stage===5)return 0;return 0;}
+function quality(){if(stage===1)return queue.reduce((s,id)=>s+strokeQuality(id),0)/queue.length;if(stage===2)return clamp(cook*.40+mixed*.30+clamp(flips/5)*.15+seasoningProgress*.15-burn*.60-lost*.40);if(stage===3){let timeFit=clamp(1-Math.abs(simmer-6)/6),vol=clamp(1-Math.abs(soup-.76)/.38);return clamp(timeFit*.38+vol*.32+clamp(gentle/2)*.3-damage*1.05-burn*.2);}if(stage===4)return clamp((lowFirst?.18:0)+clamp(1-Math.abs(starch-.58)/.58)*.2+mix*.22+glaze*.4-clumps.length*.022-pourBad*.08);if(stage===5)return 0;return 0;}
 // 刻んだ薬味は鍋に移す際に同種・近傍ごとの描画バッチへ集約。
 // 元の仕込みデータと採点は変更せず、投入量は面積・体積として維持する。
 function batchRecipe(source){
@@ -1134,9 +1141,11 @@ function positionHeatDial(){
  box.style.display='block';
  const rect=canvas.getBoundingClientRect(),mobile=innerWidth<=700;
  const height=box.offsetHeight||230;
- const top=Math.max(rect.top,rect.top+(rect.height-height)/2);
+ // コンロ操作は鍋とは独立した画面座標。PCは次工程ボタンの上に置く。
+ const bottomLimit=Math.min(rect.bottom-12,$('next').getBoundingClientRect().top-12);
+ const top=mobile?Math.max(rect.top,rect.top+(rect.height-height)/2):Math.max(rect.top+12,bottomLimit-height);
  box.style.setProperty('left','auto','important');
- box.style.setProperty('right',mobile?'max(6px, env(safe-area-inset-right))':'10px','important');
+ box.style.setProperty('right',mobile?'max(6px, env(safe-area-inset-right))':Math.max(16,innerWidth-rect.right+16)+'px','important');
  box.style.setProperty('top',top+'px','important');
  box.style.setProperty('bottom','auto','important');
  box.style.transform='none';
@@ -1231,8 +1240,8 @@ function updateMobileCriteria(){
   const id=current(),rec=cutRecords[id],count=rec.strokes.length;
   if(isHerb(id)){
    const ps=pieces.filter(p=>p.type===id);
-   const fine=ps.reduce((s,p)=>s+clamp(1-Math.sqrt(area(p.poly))/.3),0)/Math.max(1,ps.length);
-   add('刻む回数の目安：14回',count,14,count+' / 14回');
+   const fine=herbFineness(ps);
+   add('刻む回数の目安：8回',count,8,count+' / 8回');
    add('細かさ（小さいほど高評価）',fine,1,pct(fine));
   }else{
    const ss=rec.strokes,vertical=ss.filter(s=>Math.abs(Math.sin(s.angle))>.8).length,horizontal=ss.filter(s=>Math.abs(Math.sin(s.angle))<.6).length;
@@ -1245,7 +1254,8 @@ function updateMobileCriteria(){
   add('香味野菜の炒まり：100%目標',aromaProgress,1,pct(aromaProgress));
   add('肉の炒まり／醤の馴染み',Math.min(cook,mixed),1,pct(cook)+' / '+pct(mixed));
   add('鍋振り：5回が目安',flips,5,flips+' / 5回');
-  add('焦げ／飛散ロス：低く保つ',Math.max(burn,lost),1,pct(burn)+' / '+pct(lost),true);
+  add('焦げによる減点（最大60点）',burn,1,'−'+(burn*60).toFixed(1)+'点',true);
+  add('飛散ロスによる減点（最大40点）',lost,1,'−'+(lost*40).toFixed(1)+'点',true);
  }else if(stage===3){
   add('適温で煮込む：5〜7秒',simmer,6,simmer.toFixed(1)+'秒 / 5〜7秒');
   add('スープ残量：76%が目安',soup,1,pct(soup)+' / 目標76%');
