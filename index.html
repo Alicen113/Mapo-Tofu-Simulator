@@ -146,10 +146,54 @@ body[data-stage="2"] #view,body[data-stage="3"] #view,body[data-stage="4"] #view
  #mobileHeatButtons{grid-template-columns:1fr;gap:5px}
  #mobileHeatButtons button{min-height:40px;font-size:12px}
 }
+/* スマホの情報順：ヘッダー→説明→採点→材料→調理→次工程。 */
+#scoreCriteria{display:none}
+@media(max-width:700px){
+ body,body[data-stage="6"]{height:100dvh;min-height:0;overflow:hidden;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto auto minmax(0,1fr) auto;gap:4px;padding: max(4px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(4px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));}
+ header.panel{grid-row:1;grid-column:1;display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:5px 6px;min-width:0}
+ header h1{width:100%;flex:1 0 100%;font-size:13px;letter-spacing:0}
+ header small,header #step,header #fullscreen{display:none!important}
+ header #sound,header #reset{min-height:28px;padding:4px 6px!important;font-size:10px!important;margin:0}
+ header #bgmSelect{flex:1;min-width:0;max-width:none!important;min-height:28px}
+ header #reset{margin-left:auto}
+ #info{display:block;grid-row:2;grid-column:1;position:static;width:100%;padding:5px 7px;max-height:17dvh;overflow:auto;min-height:0}
+ #info h2{display:inline;font-size:11px;margin:0 6px 0 0}
+ #helpToggle{min-height:26px;padding:3px 7px;margin:0;font-size:10px;vertical-align:middle}
+ #help{font-size:11px;line-height:1.5;margin:5px 0 0;white-space:normal}
+ #stats,#progress,#meters{display:none!important}
+ #mobileScore{position:static;grid-row:3;grid-column:1;display:block;min-height:0;max-height:23dvh;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:6px 8px;border-radius:10px;pointer-events:auto}
+ #mobileScore .score-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+ #mobileScore .score-heading span{font-size:11px;color:#ffd4a1}
+ #mobileScoreValue{font-size:13px}
+ #scoreCriteria{display:grid;gap:4px}
+ .criterion{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 6px;font-size:10px}
+ .criterion .criterion-label{font-size:10px!important;color:#f4e1c6!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .criterion b{font-weight:500;font-size:10px;color:#ffd08c;font-variant-numeric:tabular-nums}
+ .criterion progress{grid-column:1/-1;appearance:none;-webkit-appearance:none;width:100%;height:5px;border:0;border-radius:6px;overflow:hidden;background:#ffffff18}
+ .criterion progress::-webkit-progress-bar{background:#ffffff18;border-radius:6px}
+ .criterion progress::-webkit-progress-value{background:#eab363;border-radius:6px}
+ .criterion progress::-moz-progress-bar{background:#eab363;border-radius:6px}
+ .criterion.bad progress::-webkit-progress-value{background:#e77a69}
+ .criterion.bad progress::-moz-progress-bar{background:#e77a69}
+ #buttons,#buttons:has(.stir-group){position:static;grid-row:4;grid-column:1;max-height:20dvh;min-height:0;width:100%;overflow:auto;padding:4px;gap:4px;transform:none}
+ #view,body[data-stage="6"] #view{grid-row:5;grid-column:1;min-height:0;height:100%;align-self:stretch}
+ #bottom{position:static;grid-row:6;grid-column:1;justify-content:flex-end;min-height:36px;margin:0;padding:0}
+ #next{margin-left:auto;min-height:36px;padding:8px 14px;font-size:12px}
+ body[data-stage="6"] #info{display:block}
+ body[data-stage="6"] #result{grid-row:3;grid-column:1;position:static;width:100%;max-height:29dvh;overflow:auto}
+ body[data-stage="6"] #mobileScore{display:none}
+ body[data-stage="6"] #bottom{display:none}
+}
+@media(max-width:700px) and (max-height:560px){
+ header h1{width:auto;flex:1 1 auto;font-size:11px}
+ header #bgmSelect{max-width:120px!important}
+ #mobileScore{max-height:20dvh}
+ #buttons,#buttons:has(.stir-group){max-height:17dvh}
+}
 </style></head><body>
 <canvas id="view" aria-label="麻婆豆腐の調理場"></canvas>
 <header class="panel"><h1>麻婆豆腐シミュレーター</h1><small>HANDCRAFTED COOKING ATELIER · 食材の皮・繊維・断面を再現</small><span id="step"></span><button id="sound">音 ON</button><select id="bgmSelect" aria-label="BGMの選択" style="font:inherit;max-width:160px;padding:8px;border-radius:9px;background:#443024;color:#fff0db;border:1px solid #b9834966"><option value="chinese">BGM：中華風</option><option value="lofi">BGM：chill Lo-fi</option><option value="calm">BGM：落ち着いた曲</option><option value="upbeat">BGM：ノリノリな曲</option></select><button id="fullscreen" type="button" title="対応ブラウザで全画面表示">⛶ 全画面</button><button id="reset" title="具材選択から最初に戻る">↻ やり直し</button></header>
-<section id="mobileScore" class="panel" aria-label="現在の採点"><span>採点</span><strong id="mobileScoreValue">—</strong></section>
+<section id="mobileScore" class="panel" aria-label="採点項目と採点基準"><div class="score-heading"><span>採点項目・基準</span><strong id="mobileScoreValue">—</strong></div><div id="scoreCriteria"></div></section>
 <section id="info" class="panel"><h2 id="title"></h2><button id="helpToggle" type="button" aria-controls="help" aria-expanded="false">説明を表示</button><p id="help" hidden></p><div id="stats"></div><div id="meters"></div><div id="progress"><div id="bar"></div></div></section>
 <div id="buttons" aria-label="具材と調理道具の選択"></div>
 <div id="bottom"><div id="controls" class="panel"><div id="heatrow"><label id="heatlabel" for="heat">火加減</label><input id="heat" type="range" min="0" max="100" value="0" tabindex="-1" aria-hidden="true"><button id="heatdial" type="button" role="slider" aria-labelledby="heatlabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="ダイヤルを回す／上下にドラッグ。矢印キーでも調整できます"><span id="dialneedle"></span></button><div id="diallabels">消火 · 弱 · 中 · 強</div><span id="heattext"></span><div id="mobileHeatButtons" role="group" aria-label="火加減"><button type="button" data-heat="0">消火</button><button type="button" data-heat="20">弱火</button><button type="button" data-heat="50">中火</button><button type="button" data-heat="90">強火</button></div><button id="off">消火</button></div></div><button id="next">仕込み開始 →</button></div>
@@ -1173,6 +1217,57 @@ if(stage>=1&&stage<=4)scoreText=Math.round(quality()*100)+' / 100点';
 else if(stage===5)scoreText='仕上げ：採点なし';
 else if(stage===6)scoreText=$('score').textContent;
 $('mobileScoreValue').textContent=scoreText;
+updateMobileCriteria();
+}
+// 操作の目標値と実測値を分けて表示。進捗と減点指標を混同しない。
+function updateMobileCriteria(){
+ if(innerWidth>700)return;
+ const rows=[];
+ const add=(label,value,target,display,bad=false)=>rows.push({label,value:clamp(value/Math.max(.0001,target)),display,bad});
+ const pct=v=>Math.round(v*100)+'%';
+ if(stage===0){
+  add('香味野菜の選択（任意・採点なし）',selected.size,ingredients.length,selected.size+' / '+ingredients.length+'種類');
+ }else if(stage===1){
+  const id=current(),rec=cutRecords[id],count=rec.strokes.length;
+  if(isHerb(id)){
+   const ps=pieces.filter(p=>p.type===id);
+   const fine=ps.reduce((s,p)=>s+clamp(1-Math.sqrt(area(p.poly))/.3),0)/Math.max(1,ps.length);
+   add('刻む回数の目安：14回',count,14,count+' / 14回');
+   add('細かさ（小さいほど高評価）',fine,1,pct(fine));
+  }else{
+   const ss=rec.strokes,vertical=ss.filter(s=>Math.abs(Math.sin(s.angle))>.8).length,horizontal=ss.filter(s=>Math.abs(Math.sin(s.angle))<.6).length;
+   add('縦の切断：3回以上が目安',vertical,3,vertical+' / 3回');
+   add('横の切断：3回以上が目安',horizontal,3,horizontal+' / 3回');
+   add('等間隔・直角・形の総合精度',strokeQuality(id),1,Math.round(strokeQuality(id)*50)+' / 50点');
+  }
+  add('仕込み全体の評価',quality(),1,Math.round(quality()*100)+' / 100点');
+ }else if(stage===2){
+  add('香味野菜の炒まり：100%目標',aromaProgress,1,pct(aromaProgress));
+  add('肉の炒まり／醤の馴染み',Math.min(cook,mixed),1,pct(cook)+' / '+pct(mixed));
+  add('鍋振り：5回が目安',flips,5,flips+' / 5回');
+  add('焦げ／飛散ロス：低く保つ',Math.max(burn,lost),1,pct(burn)+' / '+pct(lost),true);
+ }else if(stage===3){
+  add('適温で煮込む：5〜7秒',simmer,6,simmer.toFixed(1)+'秒 / 5〜7秒');
+  add('スープ残量：76%が目安',soup,1,pct(soup)+' / 目標76%');
+  add('優しく混ぜる：2.0が目安',gentle,2,gentle.toFixed(1)+' / 2.0');
+  add('豆腐の崩壊：0%が理想',damage,1,pct(damage),true);
+ }else if(stage===4){
+  add('① 投入前に弱火・消火',lowFirst?1:0,1,lowFirst?'達成':'未達');
+  add('② 片栗粉：基準量100%',starch/.58,1,Math.round(starch/.58*100)+'%');
+  add('撹拌／ダマ：100%／0個が目標',mix,1,pct(mix)+' / '+clumps.length+'個');
+  add('③ とろみ／ツヤ：100%目標',glaze,1,pct(viscosity)+' / '+pct(glaze));
+ }else if(stage===5){
+  for(const [id,name,,target] of topDefs)if(chosenTops.has(id))add(name+'（自由・採点なし）',topAmounts[id],target,Math.round(topAmounts[id]/target*100)+'%');
+  if(!rows.length)add('トッピングは自由・採点対象外',0,1,'制限なし');
+ }
+ const box=$('scoreCriteria');box.replaceChildren();
+ for(const row of rows){
+  const item=document.createElement('div');item.className='criterion'+(row.bad?' bad':'');
+  const label=document.createElement('span');label.className='criterion-label';label.textContent=row.label;label.title=row.label;
+  const value=document.createElement('b');value.textContent=row.display;
+  const bar=document.createElement('progress');bar.max=100;bar.value=row.value*100;bar.setAttribute('aria-label',row.label+'：'+row.display);
+  item.append(label,value,bar);box.append(item);
+ }
 }
 function finish(){drops=[];steam=[];let total=Math.round(scores.reduce((a,b)=>a+b,0)/Math.max(1,scores.length)),rank=total>=90?'特級':total>=75?'上級':total>=55?'中級':'見習い';let name='手仕込みの四川風麻婆豆腐';if(selected.has('cheese')&&topAmounts.sesame>.1)name='コクと香りが引き立つ！まろやかチーズ麻婆豆腐';if((selected.has('negi')||topAmounts.scallion>.6)&&topAmounts.pepper>.55)name='痺れる旨さ！山盛りネギの本格四川風麻婆豆腐';if(topAmounts.cilantro>.4)name='香草が踊る！パクチーたっぷり麻婆豆腐';if(selected.size===ingredients.length&&topDefs.every(x=>topAmounts[x[0]]>.015))name='全具材＆トッピング制覇！神の領域の特級麻婆豆腐';$('dishname').textContent=name;$('score').textContent=total+'点 · '+rank;let reviews=[total>=80?'香りと食感が調和した、見事な職人の一皿。':'切り方も火加減も、あなただけの味わいになりました。'];if(selected.has('eggplant'))reviews.push('なすが旨辛のあんを吸い込み、ジューシー。');if(selected.has('cheese'))reviews.push('チーズのコクが刺激をやさしく包みます。');if(selected.has('shimeji'))reviews.push('しめじの旨味が奥行きをプラス。');if(topAmounts.pepper>.65)reviews.push('花椒ドバ盛りの、痺れを愛する仕上がり！');if(topAmounts.scallion>.65)reviews.push('ネギだくの鮮やかな香りと食感。');if(topAmounts.chili>.65)reviews.push('ラー油たっぷり、燃えるような辛さ。');if(topAmounts.threads>.1)reviews.push('糸唐辛子が中央を華やかに彩ります。');if(burn>.25)reviews.push('次は焦げる前に撹拌と鍋振りを。');if(damage>.25)reviews.push('おたまをゆっくり滑らせると、豆腐をもっと美しく保てます。');if(clumps.length>6)reviews.push('片栗粉は弱火で回し入れ、すぐ優しく混ぜましょう。');if(glaze>.7)reviews.push('強火で乳化したツヤが食欲を誘います。');$('review').textContent=reviews.join(' ');$('detail').textContent=['包丁（サイコロ50点基準を正規化）','炒め・キツネ色と醤','煮込み・残量と豆腐保護','とろみ・手順と乳化'].map((s,i)=>s+'\n'+scores[i].toFixed(1)+' / 100').join('\n')+'\n\n総合：4工程の平均 / 100点\n仕上げトッピング：採点対象外（自由な盛り付け）';if(ac){let now=ac.currentTime;[0,4,7,12].forEach((v,i)=>note(261.6*2**(v/12),now+i*.12,.6,.07,'triangle',master));}}
 function resize(){const r=canvas.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);DPR=Math.min(devicePixelRatio||1,1);canvas.width=Math.round(W*DPR);canvas.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);camera();}
